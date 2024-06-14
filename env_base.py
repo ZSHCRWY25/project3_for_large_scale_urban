@@ -1,107 +1,31 @@
 import yaml
 import numpy as np
 import sys
-
+import math
 import matplotlib.pyplot as plt
-
-from ir_sim.world import env_plot, mobile_robot, car_robot, obs_circle, obs_polygon
-from ir_sim.env.env_robot import env_robot
-from ir_sim.env.env_car import env_car
-from ir_sim.env.env_obs_cir import env_obs_cir
-from ir_sim.env.env_obs_line import env_obs_line
-from ir_sim.env.env_obs_poly import env_obs_poly
 from PIL import Image
 from pynput import keyboard
+import xlrd
+from path_planning_main import path_plan
+from grid_3D_safe_zone import grid_3D_safe_zone
 
 class env_base:
 
-    def __init__(self, world_name=None, plot=True,  **kwargs):
-
-        if world_name != None:
-            world_name = sys.path[0] + '/' + world_name
-            
-            with open(world_name) as file:
-                com_list = yaml.load(file, Loader=yaml.FullLoader)
-
-                world_args = com_list['world']#获取各种环境参数
-                self.__height = world_args.get('world_height', 10)
-                self.__width = world_args.get('world_width', 10)
-                self.offset_x = world_args.get('offset_x', 0)#是环境的偏移量，用于调整环境的原点位置
-                self.offset_y = world_args.get('offset_y', 0)
-                self.step_time = world_args.get('step_time', 0.1)#环境中的步长，表示每个时间步的持续时间
-                self.world_map =  world_args.get('world_map', None)#环境的地图
-                self.xy_reso = world_args.get('xy_resolution', 1)
-                self.yaw_reso = world_args.get('yaw_resolution', 5)#这些是环境的分辨率，分别表示在平面坐标和偏航角上的分辨率
-                self.offset = np.array([self.offset_x, self.offset_y])
-
-                self.robots_args = com_list.get('robots', dict())
-                self.robot_number = kwargs.get('robot_number', self.robots_args.get('robot_number', 0) )
-                
-                self.cars_args = com_list.get('cars', dict())
-                self.car_number = self.cars_args.get('number', 0)
-            
-                # obs_cir
-                self.obs_cirs_args = com_list.get('obs_cirs', dict())
-                self.obs_cir_number = self.obs_cirs_args.get('number', 0)
-                self.obs_step_mode = self.obs_cirs_args.get('obs_step_mode', 0)
-
-                # obs line
-                self.obs_lines_args = com_list.get('obs_lines', dict())
-
-                # obs polygons
-                self.obs_polygons_args = com_list.get('obs_polygons', dict())
-                self.vertexes_list = self.obs_polygons_args.get('vertexes_list', [])
-                self.obs_poly_num = self.obs_polygons_args.get('number', 0)
-        else:
-            self.__height = kwargs.get('world_height', 10)
-            self.__width = kwargs.get('world_width', 10)
-            self.step_time = kwargs.get('step_time', 0.1)
-            self.world_map = kwargs.get('world_map', None)
-            self.xy_reso = kwargs.get('xy_resolution', 1)
-            self.yaw_reso = kwargs.get('yaw_resolution', 5)
-            self.offset_x = kwargs.get('offset_x', 0)
-            self.offset_y = kwargs.get('offset_y', 0)
-            self.robot_number = kwargs.get('robot_number', 0)
-            self.obs_cir_number = kwargs.get('obs_cir_number', 0)
-            self.car_number = kwargs.get('car_number', 0)
-            self.robots_args = kwargs.get('robots', dict())
-            self.obs_cirs_args = kwargs.get('obs_cirs', dict())
-            self.cars_args = kwargs.get('cars', dict())
-            self.obs_lines_args = kwargs.get('obs_lines', dict())
-            self.obs_polygons_args = kwargs.get('obs_polygons', dict())
-        
-        self.plot = plot
-        self.components = dict()
-        self.init_environment(**kwargs)
-
-        if kwargs.get('teleop_key', False):#判断检查是否传入了名为 teleop_key 的参数并且其值为 True
-            
-            self.key_lv_max = 2#设置一些键盘控制相关的属性，例如最大线性速度和最大角速度
-            self.key_ang_max = 2
-            self.key_lv = 0
-            self.key_ang = 0
-            self.key_id = 1
-            self.alt_flag = 0
-
-            plt.rcParams['keymap.save'].remove('s')#移除 matplotlib 中的保存和退出快捷键（'s' 和 'q'）
-            plt.rcParams['keymap.quit'].remove('q')
-            
-            self.key_vel = np.zeros(2,)#初始化一个长度为 2 的零向量 self.key_vel。
-
-            print('start to keyboard control')
-            print('w: forward', 's: backforward', 'a: turn left', 'd: turn right', 
-                  'q: decrease linear velocity', 'e: increase linear velocity',
-                  'z: decrease angular velocity', 'c: increase angular velocity',
-                  'alt+num: change current control robot id')
-                  
-            self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)#if kwargs.get('mouse', False):：这个条件判断检查是否传入了名为 mouse 的参数，并且其值为 True。如果满足条件，将执行一些与鼠标相关的操作
-            self.listener.start()
-
-        if kwargs.get('mouse', False):
-            pass
+    def __init__(self, map_height = 500, map_width = 500, map_high =30 , dron_num = 8, **kwargs):
+        self.map_height = map_height
+        self.map_width = map_width
+        self.map_high = map_high
+        self.dron_num = dron_num
+        self.starting = []
+        self.destination = []
 
 
-    def init_environment(self, robot_class=mobile_robot, car_class=car_robot, obs_cir_class=obs_circle, obs_polygon_class=obs_polygon,  **kwargs):
+    def init_map(self):
+        map_size = [self.map_height, self.map_width,self.map_high]
+        [E, E_safe, E3d, E3d_safe ,obs_list] = grid_3D_safe_zone(map_size, 1, 25, self.dron_num, self.starting, self.destination, 2)
+
+
+    def init_environment(self, robot_class=mobile_robot, obs_cir_class=obs_circle, **kwargs):
 
         # world
         px = int(self.__width / self.xy_reso)#计算了世界地图的像素大小(px和py)
@@ -311,6 +235,38 @@ class env_base:
     def show_ani(self):
         self.world_plot.show_ani()
     
+    def read_coordinates_from_excel(file_path):
+        """
+        从 Excel 文件中读取无人机的起点坐标和终点坐标。
+
+    Args:
+        file_path (str): Excel 文件路径。
+
+    Returns:
+        tuple: 包含两个列表的元组，第一个列表是起点坐标，第二个列表是终点坐标。
+    """
+        f1origin = []
+        f2origin = []
+
+        try:
+            data = xlrd.open_workbook(file_path)
+            nums = len(data.sheets())
+
+            for i in range(nums):
+                sheet = data.sheets()[i]
+                nrows = sheet.nrows
+
+                for row in range(nrows):
+                    origin = sheet.row_values(row)[:3]
+                    destination = sheet.row_values(row)[3:]
+
+                    f1origin.append(origin)
+                    f2origin.append(destination)
+
+            return f1origin, f2origin
+        except Exception as e:
+            print(f"Error reading coordinates from Excel: {e}")
+            return None, None
 
 
     

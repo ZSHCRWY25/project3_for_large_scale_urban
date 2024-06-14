@@ -11,7 +11,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from theta_star_3D import theta_star_3D
+import theta_star_3D
 import math
 def path_planning_main(sizeE,P0, Pend, E3d_safe):
     ##############################################################################################################
