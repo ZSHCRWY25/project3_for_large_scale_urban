@@ -134,6 +134,39 @@ def cal_exp_tim(Pa, Pb, Va, Vb, ra, rb):
             t = min(t3, t4)
 
         return t
+
+def cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx,rel_vy,rel_vz,  ra, rb):
+    r = ra + rb
+
+        # rel_x: xa - xb
+        # rel_y: ya - yb
+        # rel_z: za - zb
+        # (vx2 + vy2 + vz2)*t2 + (2x*vx + 2*y*vy)*t+x2+y2-(r+mr)2 = 0
+        # 计算期望碰撞时间。
+
+    a = rel_vx ** 2 + rel_vy ** 2 + rel_vz**2
+    b = 2* rel_x * rel_vx + 2* rel_y * rel_vy + 2* rel_z * rel_vz 
+    c = rel_x ** 2 + rel_y ** 2 + rel_z ** 2 - r ** 2
+
+    if c <= 0:
+        return 0
+
+    temp = b ** 2 - 4 * a * c
+
+    if temp <= 0:
+        t = inf
+    else:
+        t1 = ( -b + sqrt(temp) ) / (2 * a)
+        t2 = ( -b - sqrt(temp) ) / (2 * a)
+
+        t3 = t1 if t1 >= 0 else inf
+        t4 = t2 if t2 >= 0 else inf
+        
+        t = min(t3, t4)
+
+    return t
+
+
 def distance(point1, point2):
         return sqrt( (point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2 + (point2[2] - point1[2]) ** 2)
 
