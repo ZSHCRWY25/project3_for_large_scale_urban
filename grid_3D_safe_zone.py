@@ -47,8 +47,8 @@ def grid_3D_safe_zone(sizeE, d_grid,h, path_num, f1origin, f2origin, n_low):
     obs_num=0
     obs_list=[]
 
-    for i in range(x_size):
-        for j in range(y_size):
+    for i in range(j_size):
+        for j in range(x_size):
             # 检查栅格值
             if EE[j, i] > 0:
                 # 指定障碍物高度

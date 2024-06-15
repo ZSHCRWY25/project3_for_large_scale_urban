@@ -15,22 +15,28 @@ def theta_star_3D(K, E3d_safe, x0_old, y0_old, z0_old, xend_old, yend_old, zend_
     kg = K[0]# 代价函数
     kh = K[1]
     ke = K[2]
+
     # 起止点
     x0 = np.int(np.floor(x0_old))
     y0 = np.int(np.floor(y0_old))
     z0 = np.int(np.floor(z0_old))
+    
     xend = np.int(np.ceil(xend_old))
     yend = np.int(np.ceil(yend_old))
     zend = np.int(np.ceil(zend_old))
+
     y_size = sizeE[0]
     x_size = sizeE[1]
     z_size = sizeE[2]
+
     came_fromx = np.zeros((y_size, x_size, z_size))
     came_fromy = np.zeros((y_size, x_size, z_size))
     came_fromz = np.zeros((y_size, x_size, z_size))
+
     came_fromx[y0, x0, z0] = x0
     came_fromy[y0, x0, z0] = y0
     came_fromz[y0, x0, z0] = z0
+
     closed_list = np.array([])
     open_list = np.array([[y0, x0, z0]])
     G = float("inf") * np.ones((y_size, x_size, z_size))
