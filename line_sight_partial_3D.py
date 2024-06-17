@@ -42,7 +42,7 @@ def line_sight_partial_3D(E3d_safe, xb_bound, yb_bound, zb_bound, sizeE):
     # 初始化
     x1, y1, sight = x1_0, y1_0, 1
 
-    f = 0# 不太懂，应该是顺着航迹求导，然后根据斜率下降，检查周围栅格值
+    f = 0# 
     if dy>= dx:
         while y1 != y2:
             f += dx

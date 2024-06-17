@@ -47,7 +47,7 @@ def grid_3D_safe_zone(sizeE, d_grid,h, path_num, f1origin, f2origin, n_low):
     obs_num=0
     obs_list=[]
 
-    for i in range(j_size):
+    for i in range(y_size):
         for j in range(x_size):
             # 检查栅格值
             if EE[j, i] > 0:
@@ -157,7 +157,7 @@ def grid_3D_safe_zone(sizeE, d_grid,h, path_num, f1origin, f2origin, n_low):
     E3d_safe[np.ix_(np.arange(0, x_size), np.arange(0, y_size), [0, -1])] = 1
 
 
-    return [E, E_safe, E3d, E3d_safe, obs_list]
+    return E, E_safe, E3d, E3d_safe, obs_list
 
 ##测试一下
 #x_size,y_size,z_size = sizeE = [200, 200, 20]

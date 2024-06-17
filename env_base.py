@@ -29,11 +29,13 @@ class env_base:
     #E3d三维障碍物，用于学习环境
     #E3d_safe带保护区，用于路径规划
     #obs = [[x,y,h,r]]
-    return E, E_safe, E3d, E3d_safe ,obs_list
+        return E, E_safe, E3d, E3d_safe ,obs_list
 
     def init_road(self, E3d_safe):
         for i in range(self.dron_num):
             path, n_pionts = pathplan(self.map_size, self.starting[i], self.destination[i], E3d_safe)
+        
+        return path, n_pionts
 
 
     def init_environment(self, robot_class=mobile_robot, obs_cir_class=obs_circle, **kwargs):
