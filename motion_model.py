@@ -1,50 +1,15 @@
 import numpy as np
-from math import sin, cos, pi, tan
+from math import sin, cos, pi, tan,radians
 
 # reference: probabilistic robotics[book], motion model P127
-def motion_diff(current_state, vel, sampletime, noise = False, alpha = [0.01, 0, 0, 0.01, 0, 0]):
 
-    # vel: np.array([[linear vel],[angular vel]])
-    # current_state: np.array([[x], [y], [theta]])
-    # alpha: control noise includes linear, angular, orientation
-
-    if noise == True:
-
-        std_linear = np.sqrt(alpha[0] * (vel[0, 0] ** 2) + alpha[1] * (vel[1, 0] ** 2))
-        std_angular = np.sqrt(alpha[2] * (vel[0, 0] ** 2) + alpha[3] * (vel[1, 0] ** 2))
-        # gamma = alpha[4] * (vel[0, 0] ** 2) + alpha[5] * (vel[1, 0] ** 2)
-
-        vel_noise = vel + np.random.normal([[0], [0]], scale = [[std_linear], [std_angular]])
-
-    else:
-        vel_noise = vel
-
-    vt = float(vel_noise[0, 0])
-    omegat = float(vel_noise[1,0])
-
-    theta = float(wraptopi(current_state[2, 0]))
-
-    if omegat >= 0.01 or omegat <= -0.01:
-        ratio = vt/omegat
-        next_state = current_state + np.array([ [-ratio * sin(theta) + ratio * sin(theta + omegat * sampletime)], 
-                                       [ratio * cos(theta) - ratio * cos(theta + omegat * sampletime)], 
-                                       [omegat * sampletime]])
-
-    else:
-        next_state = current_state + np.array([[vt * sampletime * cos(theta)], [vt * sampletime * sin(theta)], [0]])
-
-    next_state[2, 0] =  float(wraptopi(next_state[2, 0])) 
-    
-    return next_state 
-
-
-def motion_omni(current_state, vel, sampletime, noise = False, control_std = [0.01, 0.01]):
+def motion_omni(current_state, vel, sampletime, noise = False, control_std = [0.01, 0.01, 0.01]):
 
     # vel: np.array([[vel x], [vel y]])
     # current_state: np.array([[x], [y]])
 
     if noise == True:
-        vel_noise = vel + np.random.normal([[0], [0]], scale = [[control_std[0]], [control_std[1]]])
+        vel_noise = vel + np.random.normal([[0], [0], [0]], scale = [[control_std[0]], [control_std[1]], [control_std[2]]])
     else:
         vel_noise = vel
 
@@ -52,44 +17,74 @@ def motion_omni(current_state, vel, sampletime, noise = False, control_std = [0.
     
     return next_state 
 
+def rotation_matrix_roll(roll):  
+    roll_rad = radians(roll)  
+    return np.array([  
+        [1, 0, 0],  
+        [0, cos(roll_rad), -sin(roll_rad)],  
+        [0, sin(roll_rad), cos(roll_rad)]  
+    ])  
+  
+def rotation_matrix_pitch(pitch):  
+    pitch_rad = radians(pitch)  
+    return np.array([  
+        [cos(pitch_rad), 0, sin(pitch_rad)],  
+        [0, 1, 0],  
+        [-sin(pitch_rad), 0, cos(pitch_rad)]  
+    ])  
+  
+def rotation_matrix_yaw(yaw):  
+    yaw_rad = radians(yaw)  
+    return np.array([  
+        [cos(yaw_rad), -sin(yaw_rad), 0],  
+        [sin(yaw_rad), cos(yaw_rad), 0],  
+        [0, 0, 1]  
+    ])  
+  
 
-# reference: Modern Robotics: Mechanics, Planning, and Control[book], 13.3.1.3 car-like robot
-def motion_ackermann(state, wheelbase=1, vel=np.zeros((2, 1)), steer_limit=pi/2, step_time=0.1, ack_mode='default', theta_trans=True):
+def motion_ackermann(state, velocity_body, steer_limit=pi/2, step_time=1, theta_trans=True):
     
     # l: wheel base
     # state: 0, x
     #        1, y
-    #        2, phi, heading direction
-    #        3, psi, steering angle
-    # motion_mode: default: vel: linear velocity, angular velocity of steer
-    #              steer:   vel：linear velocity, steer angle
-    #              simplify: vel: linear velocity, rotation rate, do not consider the steer angle    
-    
-    phi = state[2, 0]  
-    psi = state[3, 0] 
-    
-    if ack_mode == 'default':
-        co_matrix = np.array([ [cos(phi), 0],  [sin(phi), 0], [tan(psi) / wheelbase, 0], [0, 1] ])
-        d_state = co_matrix @ vel
-        new_state = state + d_state * step_time
-    
-    elif ack_mode == 'steer':
-        co_matrix = np.array([ [cos(phi), 0],  [sin(phi), 0], [tan(psi) / wheelbase, 0], [0, 0] ])
-        d_state = co_matrix @ vel
-        new_state = state + d_state * step_time
-        new_state[3, 0] = np.clip(vel[1, 0], -steer_limit, steer_limit)
+    #        2  Z
+    #        绕 x 轴旋转角用 ϕ \phiϕ 表示，绕 y 轴旋转角用 θ \thetaθ 表示，绕 z 轴旋转角用 ψ \psiψ 表示。绕坐标轴逆时针旋转为正，顺时针为负
+    #        3, roll angle 滚转角 
+    #        4, pitch angle 俯仰角 
+    #        5, yaw angle 偏航角
+    #        存储形式z-y-x
+    #        velocity_body = np.array([forward_speed, lateral_speed, vertical_speed])
+    roll = state[2, 0]  
+    pitch = state[3, 0]
+    yaw = state[4, 0] 
 
-    elif ack_mode == 'simplify':
+    roll_rad = radians(roll)  
+    pitch_rad = radians(pitch)  
+    yaw_rad = radians(yaw)  
+      
+    # 构建旋转矩阵  
+    R_roll = rotation_matrix_roll(roll_rad)  
+    R_pitch = rotation_matrix_pitch(pitch_rad)  
+    R_yaw = rotation_matrix_yaw(yaw_rad)  
+      
+    # 合并旋转矩阵（Z-Y-X欧拉角顺序）  
+    R = R_yaw @ R_pitch @ R_roll  
+      
+    # 将速度从机体坐标系转换到世界坐标系  
+    velocity_world = R @ velocity_body  
+      
+    # 更新位置  
 
-        new_state = np.zeros((4, 1))
-        co_matrix = np.array([ [cos(phi), 0],  [sin(phi), 0], [0, 1] ])
-        d_state = co_matrix @ vel
-        new_state[0:3] = state[0:3] + d_state * step_time
+    new_state = np.zeros((6, 1))
+    
+    new_state[0:3] = state[0:3] + velocity_world * step_time
+    
 
-    if theta_trans:
-        new_state[2, 0] = wraptopi(new_state[2, 0]) 
+    if theta_trans:####原始代码中可以根据当前状态更新角度，但是我没写出来
+        new_state[3, 0] = wraptopi(state[3, 0]) 
         
-    new_state[3, 0] = np.clip(new_state[3, 0], -steer_limit, steer_limit) 
+    new_state[4, 0] = np.clip(state[4, 0], -steer_limit, steer_limit) 
+    new_state[5, 0] = np.clip(state[5, 0], -steer_limit, steer_limit)
 
     return new_state
 
@@ -210,11 +205,11 @@ def wraptopi(radian):
     return radian2
 
 def mod(theta):
-
     theta = theta % (2*pi)
-    if theta < - pi: return theta + 2*pi
-    if theta >= pi: return theta - 2*pi
-
+    if theta < - pi:
+        return theta + 2*pi
+    if theta >= pi:
+        return theta - 2*pi
     return theta
 
 
