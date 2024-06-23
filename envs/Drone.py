@@ -9,11 +9,10 @@ from collections import namedtuple
 import numpy as np  
   
 class Drone:  
-    def __init__(self, id, starting, destination, waypoints, n_points, init_acc,components,priority, dt=1, init_state=np.zeros((3, 1)),    
+    def __init__(self, id, starting, destination, waypoints, n_points, init_acc,components,priority, dt=1,    
                  vel=np.zeros((3, 1)), vel_max=2*np.ones((3, 1)), goal_threshold=0.1, radius=5, **kwargs):  
   
         self.id = int(id)  # 无人机编号  
-        self.state = np.array(init_state, ndmin=2) if not isinstance(init_state, np.ndarray) else init_state  # 这里要不要改为[x,y,z,vx,vy,vz]? 
         self.previous_state = self.state.copy()  
   
         self.vel = np.array(vel, ndmin=2) if not isinstance(vel, np.ndarray) else vel  # 速度  
@@ -21,7 +20,9 @@ class Drone:
   
         # 转换starting和destination为NumPy数组  
         self.starting = np.array(starting, ndmin=2) if isinstance(starting, list) else starting 
-        self.destination = np.array(destination, ndmin=2) if isinstance(destination, list) else destination  
+        self.destination = np.array(destination, ndmin=2) if isinstance(destination, list) else destination
+
+        self.state =  self.starting
   
         # waypoints作为列表传入，无需转换为NumPy数组  
         self.waypoints = waypoints  
@@ -182,11 +183,13 @@ class Drone:
     #     return False
     # 
     # 
-    def collision_check_with_dro(self, drones_list):  
+    def collision_check_with_dro(self, components):  
     # 检查与其他无人机的碰撞
         circle = namedtuple('circle', 'x y z r')
-        self_circle = circle(self.state[0], self.state[1], self.state[2], self.radius)  
-        for other_drone in drones_list:
+        self_circle = circle(self.state[0], self.state[1], self.state[2], self.radius)
+        if self.collision_flag == True:
+            return True  
+        for other_drone in  components['drone'].Drone_list:
             if other_drone is not self and not other_drone.collision_flag: 
                  other_circle = circle(other_drone.state[0], other_drone.state[1], other_drone.state[2], other_drone.radius) 
                  if self.collision_dro_dro(self_circle, other_circle):  
@@ -195,7 +198,7 @@ class Drone:
                      print('Drones collided!')  
                  return True
 
-    def collision_check_with_budling(self, building_list):
+    def collision_check_with_building(self, building_list):
         for building_obj in building_list:  
             if self.state[2] <= building_obj[2]:
                  # 确保无人机在建筑物高度或以下  [xyhr]
@@ -220,8 +223,8 @@ class Drone:
 
     def reset(self, random_bear=False):
 
-        self.state[:] = self.init_state[:]
-        self.previous_state[:] = self.init_state[:]
+        self.state[:] = self.starting
+        self.previous_state[:] = self.starting
         self.vel = np.zeros((3, 1))
         self.arrive_flag = False
         self.collision_flag = False

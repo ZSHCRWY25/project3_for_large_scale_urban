@@ -15,8 +15,8 @@ from vel_obs3D import get_alpha, get_PAA,  get_rvo_array, get_beta, cal_vo_exp_t
 # rvo_vel: [x, y, z, ve_x, ve_y, ve_z, α]速度障碍物存储形式
 
 class rvo_inter(reciprocal_vel_obs):
-    def __init__(self, neighbor_region=5, neighbor_num=10, vxmax=1.5, vymax=1.5, acceler=0.5, env_train=True, exp_radius=0.2, ctime_threshold=5, delta_t = 1):
-        super(rvo_inter, self).__init__(neighbor_region, vxmax, vymax, acceler)
+    def __init__(self, neighbor_region=5, neighbor_num=10, vxmax=1.5, vymax=1.5, vzmax = 1.5, acceler=0.5, env_train=True, exp_radius=0.2, ctime_threshold=5, delta_t = 1):
+        super(rvo_inter, self).__init__(neighbor_region, vxmax, vymax, vzmax, acceler)
 
         self.env_train = env_train
         self.exp_radius = exp_radius
@@ -24,15 +24,15 @@ class rvo_inter(reciprocal_vel_obs):
         self.ctime_threshold = ctime_threshold
         self.delta_t = delta_t
 
-    def config_vo_inf(self, robot_state, odro_state_list, obs_list, action=np.zeros((3,)), **kwargs):
+    def config_vo_inf(self, drone_state, odro_state_list, obs_list, action=np.zeros((3,)), **kwargs):
         # mode: vo, rvo, hrvo
-        agent_state, ob_list, odro_list= self.preprocess(agent_state, odro_state_list, obs_list)##获取建筑物障碍物与冲突无人机列表 preprocess函数还没改
+        ob_list, odro_list= self.preprocess(drone_state, odro_state_list, obs_list)##获取建筑物障碍物与冲突无人机列表 preprocess函数还没改
 
 
         action = np.squeeze(action)
 
-        vo_list = list(map(lambda x: self.config_vo_circle2(robot_state, x, action, 'rvo', **kwargs), odro_list))
-        #[observation_vo, vo_flag,exp_time, collision_flag, min_dis ] 
+        vo_list = list(map(lambda x: self.config_vo_circle2(drone_state, x, action, 'rvo', **kwargs), odro_list))
+        #[observation_vo, vo_flag, exp_time, collision_flag, min_dis ] 
         obs_vo_list = []
         collision_flag = False
         vo_flag = False
@@ -47,9 +47,9 @@ class rvo_inter(reciprocal_vel_obs):
             
             if vo_inf[3] is True: collision_flag = True
 
-        obs_vo_list.sort(reverse=True, key=lambda x: (-x[-1], x[-2]))#input_exp_time,min_dis
+        obs_vo_list.sort(reverse=True, key=lambda x: (-x[-1], x[-2]))#input_exp_time,min_dis对无人机进行排序，寻找威胁最大
 
-        if len(obs_vo_list) > self.nm:
+        if len(obs_vo_list) > self.nm:###选十个
             obs_vo_list_nm = obs_vo_list[-self.nm:]
         else:
             obs_vo_list_nm = obs_vo_list
@@ -58,15 +58,40 @@ class rvo_inter(reciprocal_vel_obs):
             obs_vo_list_nm = []
 
         return obs_vo_list_nm, vo_flag, min_exp_time, collision_flag
+    
+    def config_vo_reward(self, drone_state, odro_state_list, obs_list, action=np.zeros((2,)), **kwargs):
+
+        ob_list, odro_list= self.preprocess(drone_state, odro_state_list, obs_list)
+
+        vo_list = list(map(lambda x: self.config_vo_circle2(drone_state, x, action, **kwargs), odro_list))
+
+        vo_flag = False
+        min_exp_time = inf
+        min_dis = inf
+
+        for vo_inf in vo_list:
+
+            if vo_inf[4] < min_dis:
+                min_dis = vo_inf[4]
+
+            if vo_inf[1] is True:
+                vo_flag = True
+                if vo_inf[2] < min_exp_time:
+                    min_exp_time = vo_inf[2]
+
+        
+        return vo_flag, min_exp_time, min_dis
+
+
         
 
-    def config_vo_observe(self, robot_state, odro_state_list, obs_list):
+    def config_vo_observe(self, drone_state, odro_state_list, obs_list):
 
-        vo_list, _, _, _ = self.config_vo_inf(robot_state, odro_state_list, obs_list)
+        vo_list, _, _, _ = self.config_vo_inf(drone_state, odro_state_list, obs_list)
         
         return vo_list
 
-    def config_vo_circle2(self, state, odro, action, mode='rvo', **kwargs):
+    def config_vo_circle2(self, state, odro, action, **kwargs):
         
         x, y, z, vx, vy, vz, r = state[0:7]#state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
         Pa = [x, y, z]

@@ -1,4 +1,4 @@
-from drons import Drone
+from Drone import Drone
 from math import pi, cos, sin ,atan2, pi, sqrt
 import numpy as np
 import random  
@@ -27,7 +27,7 @@ class env_Drone:##需要输入：无人机数量、航路点、航路点数量�
             waypoints_list = kwargs['waypoints_list']
             n_pointst_list = kwargs['n_pointst_list']
             priority_list = kwargs['priority_list']
-            radius_list = kwargs.get('radius_list', [1])##有默认值
+            radius_list = kwargs.get('radius_list', 1)##有默认值
             starting_list, destination_list= self.init_state_distribute(self.init_mode, waypoints_list)
             #使用默认半径列表或从 init_state_distribute 函数中获取初始化状态和目标。
 

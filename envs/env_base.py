@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from pynput import keyboard
 import xlrd
-from path_planning_main import path_planning_main as pathplan
-from grid_3D_safe_zone import grid_3D_safe_zone
+from env_drones import env_Drone
+from Drone import Drone
+from world.path_planning_main import path_planning_main as pathplan##这里还要改
+from world.grid_3D_safe_zone import grid_3D_safe_zone
 
 class env_base:
 
@@ -17,103 +19,104 @@ class env_base:
         self.map_high = map_high
         self.map_size = [map_height, map_width, map_high]
         self.dron_num = dron_num
+        self.components = dict()
+        self.building_list = []
+        self.waypoints_list = []
+        self.n_pointst_list = []
+        self.priority_list = []
         self.starting = []
         self.destination = []
-        self.components = dict()
+        self.robots_args = []
+
+    def read_start_des(self):
+        file_path=[]##这里要添加
+        self.starting, self.destinatio = self.read_coordinates_from_excel(file_path)
 
 
-    def init_map(self):
+    def init_map_road(self):
         E, E_safe, E3d, E3d_safe ,obs_list = grid_3D_safe_zone(self.map_size, 1, 25, self.dron_num, self.starting, self.destination, 2)
     #E是二维障碍物地图
     #E_safe带保护区用来画图
     #E3d三维障碍物，用于学习环境
     #E3d_safe带保护区，用于路径规划
     #obs = [[x,y,h,r]]
-        return E, E_safe, E3d, E3d_safe ,obs_list
-
-    def init_road(self, E3d_safe):
+        self.building_list = obs_list
         for i in range(self.dron_num):
             path, n_pionts = pathplan(self.map_size, self.starting[i], self.destination[i], E3d_safe)
+            self.waypoints_list.append(path)
+            self.n_pointst_list.append(n_pionts)
+
+        # waypoints_list = kwargs['waypoints_list']
+        # n_pointst_list = kwargs['n_pointst_list']
+        # priority_list = kwargs['priority_list']
+
+
+    def init_environment(self, drone_class=Drone,  **kwargs):
+        self.components['drones'] = env_Drone(drone_class=drone_class,  Drone_number=self.dron_num, step_time=1, building_list = self.building_list, 
+                                              waypoints_list = self.waypoints_list,n_pointst_list = self.n_pointst_list,priority_list = self.priority_list)
+        self.drone_list = self.components['drones'].Drone_list
+
+        # if self.plot:#plot函数还没改
+        #     self.world_plot = env_plot(self.__width, self.__height, self.components, offset_x=self.offset_x, offset_y=self.offset_y, **kwargs)
         
-        return path, n_pionts
-
-
-    def init_environment(self, robot_class=mobile_robot, obs_cir_class=obs_circle, **kwargs):
-
- 
-
-
-    def on_press(self, key):
-
-        try:
-
-            if key.char.isdigit() and self.alt_flag:
-
-                if int(key.char) > self.robot_number:
-                    print('out of number of robots')
-                else:
-                    self.key_id = int(key.char)
-
-            if key.char == 'w':
-                self.key_lv = self.key_lv_max
-            if key.char == 's':
-                self.key_lv = - self.key_lv_max
-            if key.char == 'a':
-                self.key_ang = self.key_ang_max
-            if key.char == 'd':
-                self.key_ang = -self.key_ang_max
-            
-            self.key_vel = np.array([self.key_lv, self.key_ang])
-
-        except AttributeError:
-            
-            if key == keyboard.Key.alt:
-                self.alt_flag = 1
-    
-    def on_release(self, key):
+        self.time = 0
+        if self.dron_num> 0:
+            self.drone = self.components['drones'].Drone_list[0]
         
-        try:
-            if key.char == 'w':
-                self.key_lv = 0
-            if key.char == 's':
-                self.key_lv = 0
-            if key.char == 'a':
-                self.key_ang = 0
-            if key.char == 'd':
-                self.key_ang = 0
-            if key.char == 'q':
-                self.key_lv_max = self.key_lv_max - 0.2
-                print('current lv ', self.key_lv_max)
-            if key.char == 'e':
-                self.key_lv_max = self.key_lv_max + 0.2
-                print('current lv ', self.key_lv_max)
-            
-            if key.char == 'z':
-                self.key_ang_max = self.key_ang_max - 0.2
-                print('current ang ', self.key_ang_max)
-            if key.char == 'c':
-                self.key_ang_max = self.key_ang_max + 0.2
-                print('current ang ', self.key_ang_max)
-            
-            self.key_vel = np.array([self.key_lv, self.key_ang])
 
-        except AttributeError:
-            if key == keyboard.Key.alt:
-                self.alt_flag = 0
 
+
+    def collision_check(self):##检查碰撞
+        collision = False
+        for drone in self.components['drones'].Drone_list: 
+            if drone.collision_check_with_dro(self.components):
+                collision = True
+            if drone.collision_check_with_building(self.building_list):
+                collision = True
+        return collision
+    
+    def arrive_check(self):##检查到没到
+        arrive = False
+
+        for drone in self.components['drones'].Drone_list: 
+            if not drone.arrive_flag:
+                arrive = True
+
+        return arrive
+
+    def drone_step(self, vel_list, drone_id = None, **kwargs):
+
+        if drone_id == None:
+            if not isinstance(vel_list, list):
+                self.drone.move_forward(vel_list, **kwargs)
+            else:
+                for i, drone in enumerate(self.components['drones'].Drone_list):
+                   drone.move_forward(vel_list[i], **kwargs)
+        else:
+            self.components['drones'].Drone_list[drone_id-1].move_forward(vel_list, **kwargs)
+
+
+    # def render(self, time=0.05, **kwargs):
+
+    #     if self.plot:
+    #         self.world_plot.com_cla()
+    #         self.world_plot.draw_dyna_components(**kwargs)
+    #         self.world_plot.pause(time)
+            
+    #     self.time = self.time + time
         
-    def save_fig(self, path, i):
-        self.world_plot.save_gif_figure(path, i)
+    # def save_fig(self, path, i):
+    #     self.world_plot.save_gif_figure(path, i)
     
-    def save_ani(self, image_path, ani_path, ani_name='animated', **kwargs):
-        self.world_plot.create_animate(image_path, ani_path, ani_name=ani_name, **kwargs)
+    # def save_ani(self, image_path, ani_path, ani_name='animated', **kwargs):
+    #     self.world_plot.create_animate(image_path, ani_path, ani_name=ani_name, **kwargs)
 
-    def show(self, **kwargs):
-        self.world_plot.draw_dyna_components(**kwargs)
-        self.world_plot.show()
+    # def show(self, **kwargs):
+    #     self.world_plot.draw_dyna_components(**kwargs)
+    #     self.world_plot.show()
     
-    def show_ani(self):
-        self.world_plot.show_ani()
+    # def show_ani(self):
+    #     self.world_plot.show_ani()
     
     def read_coordinates_from_excel(file_path):
         """
