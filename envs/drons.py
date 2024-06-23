@@ -9,23 +9,25 @@ from collections import namedtuple
 import numpy as np  
   
 class Drone:  
-    def __init__(self, id, starting, destination, waypoints, n_points, init_acc,components, dt=1, init_state=np.zeros((3, 1)),    
+    def __init__(self, id, starting, destination, waypoints, n_points, init_acc,components,priority, dt=1, init_state=np.zeros((3, 1)),    
                  vel=np.zeros((3, 1)), vel_max=2*np.ones((3, 1)), goal_threshold=0.1, radius=5, **kwargs):  
   
         self.id = int(id)  # 无人机编号  
-        self.state = np.array(init_state, ndmin=2) if not isinstance(init_state, np.ndarray) else init_state  # 初始位置  
+        self.state = np.array(init_state, ndmin=2) if not isinstance(init_state, np.ndarray) else init_state  # 这里要不要改为[x,y,z,vx,vy,vz]? 
         self.previous_state = self.state.copy()  
   
         self.vel = np.array(vel, ndmin=2) if not isinstance(vel, np.ndarray) else vel  # 速度  
         self.vel_max = np.array(vel_max, ndmin=2) if not isinstance(vel_max, np.ndarray) else vel_max  # 速度上限  
   
         # 转换starting和destination为NumPy数组  
-        self.starting = np.array(starting, ndmin=2) if isinstance(starting, list) else starting  
+        self.starting = np.array(starting, ndmin=2) if isinstance(starting, list) else starting 
         self.destination = np.array(destination, ndmin=2) if isinstance(destination, list) else destination  
   
         # waypoints作为列表传入，无需转换为NumPy数组  
         self.waypoints = waypoints  
-        self.n_points = n_points  # 航路点个数  
+        self.n_points = n_points  # 航路点个数
+
+        self.priority = priority  
   
         # 当前目标点，初始化为destination或者waypoints的第二个点 （waypoints）
         if len(waypoints) > 0:  
@@ -148,36 +150,62 @@ class Drone:
         return vel
     
 ############################################## circle = namedtuple('circle', 'x y z r')这里闹不清楚
-    def collision_check(self, components):
-        circle = namedtuple('circle', 'x y z r')
-        building_obj = namedtuple('building', 'x y h r')
+    # def collision_check(self, components):
+    #     circle = namedtuple('circle', 'x y z r')
+    #     building_obj = namedtuple('building', 'x y h r')
         
-        self_circle = circle(self.state[0], self.state[1], self.state[2], self.radius)
+    #     self_circle = circle(self.state[0], self.state[1], self.state[2], self.radius)
         
-        if self.collision_flag == True:
-            return True
+    #     if self.collision_flag == True:
+    #         return True
 
-        #检查无人机间冲突
-        for other_drone in components['Drones'].drone_list:
+    #     #检查无人机间冲突
+    #     for other_drone in components['Drones'].drone_list:
+    #         if other_drone is not self and not other_drone.collision_flag: 
+    #             other_circle = circle(other_drone.state[0], other_drone.state[1], other_drone.state[2], other_drone.radius) 
+    #             if self.collision_dro_dro(self_circle, other_circle):  
+    #                 other_drone.collision_flag = True  
+    #                 self.collision_flag = True  
+    #                 print('Drones collided!')  
+    #                 return True 
+    #    # 检查无人机与圆柱建筑物冲突  
+    #     for building_obj in components['building'].building_list:  
+    #         if self.state[2] <= building_obj.h:  # 确保无人机在建筑物高度或以下  
+    #             # 计算无人机与建筑物在地面的投影圆的距离  
+    #             dis = self.distance2D(self_circle, (building_obj.x, building_obj.y))  
+    #             if dis <= self_circle.r + building_obj.r:  # 如果距离小于等于两圆半径之和，则碰撞  
+    #                 self.collision_flag = True  
+    #                 print('Drone collided with a building!')  
+    #                 return True  
+  
+    #     # 如果没有碰撞，返回False  
+    #     return False
+    # 
+    # 
+    def collision_check_with_dro(self, drones_list):  
+    # 检查与其他无人机的碰撞
+        circle = namedtuple('circle', 'x y z r')
+        self_circle = circle(self.state[0], self.state[1], self.state[2], self.radius)  
+        for other_drone in drones_list:
             if other_drone is not self and not other_drone.collision_flag: 
-                other_circle = circle(other_drone.state[0], other_drone.state[1], other_drone.state[2], other_drone.radius) 
-                if self.collision_dro_dro(self_circle, other_circle):  
-                    other_drone.collision_flag = True  
-                    self.collision_flag = True  
-                    print('Drones collided!')  
-                    return True 
-       # 检查无人机与圆柱建筑物冲突  
-        for building_obj in components['building'].building_list:  
-            if self.state[2] <= building_obj.h:  # 确保无人机在建筑物高度或以下  
+                 other_circle = circle(other_drone.state[0], other_drone.state[1], other_drone.state[2], other_drone.radius) 
+                 if self.collision_dro_dro(self_circle, other_circle):  
+                     other_drone.collision_flag = True  
+                     self.collision_flag = True  
+                     print('Drones collided!')  
+                 return True
+
+    def collision_check_with_budling(self, building_list):
+        for building_obj in building_list:  
+            if self.state[2] <= building_obj[2]:
+                 # 确保无人机在建筑物高度或以下  [xyhr]
                 # 计算无人机与建筑物在地面的投影圆的距离  
-                dis = self.distance2D(self_circle, (building_obj.x, building_obj.y))  
-                if dis <= self_circle.r + building_obj.r:  # 如果距离小于等于两圆半径之和，则碰撞  
+                dis = self.distance2D(self.state, (building_obj[0], building_obj[1]))  
+                if dis <= self.radius + building_obj[3]:  # 如果距离小于等于两圆半径之和，则碰撞  
                     self.collision_flag = True  
                     print('Drone collided with a building!')  
-                    return True  
-  
-        # 如果没有碰撞，返回False  
-        return False 
+                    return True    
+   
 
     def set_state(self):
         v_des = self.cal_des_vel()
@@ -198,8 +226,6 @@ class Drone:
         self.arrive_flag = False
         self.collision_flag = False
 
-        if random_bear:
-            self.state[3, 0] = np.random.uniform(low = -pi, high = pi)
 
     # 检查两个无人机是否碰撞  
     @staticmethod  

@@ -2,7 +2,7 @@ import numpy as np
 from ir_sim.world import motion_omni
 from math import sin, cos, atan2
 # import cvxpy
-
+####这个文件暂存，以后可以改成动态圆柱形障碍物
 class obs_circle:
     def __init__(self, id=0, state=np.zeros((2, 1)), radius=0.2, velocity=np.zeros((2, 1)), vel_max=2 * np.ones((2, 1)), 
      step_time=0.1, obs_model='static', goal=np.zeros((2, 1)), goal_threshold=0.1, **kwargs):

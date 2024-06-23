@@ -1,6 +1,6 @@
 import numpy as np
 from math import sin, cos, pi, tan,radians
-
+######这个是用来写欧拉角表示无人机运动的，但是在Dronr类里已经用方位角+俯仰角表示了，这个文件后面再完善吧
 # reference: probabilistic robotics[book], motion model P127
 
 def motion_omni(current_state, vel, sampletime, noise = False, control_std = [0.01, 0.01, 0.01]):
