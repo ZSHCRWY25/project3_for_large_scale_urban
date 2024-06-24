@@ -24,9 +24,9 @@ class rvo_inter(reciprocal_vel_obs):
         self.ctime_threshold = ctime_threshold
         self.delta_t = delta_t
 
-    def config_vo_inf(self, drone_state, odro_state_list, obs_list, action=np.zeros((3,)), **kwargs):
+    def config_vo_inf(self, drone_state, drone_state_list, obs_list, action=np.zeros((3,)), **kwargs):
         # mode: vo, rvo, hrvo
-        ob_list, odro_list= self.preprocess(drone_state, odro_state_list, obs_list)##获取建筑物障碍物与冲突无人机列表 preprocess函数还没改
+        ob_list, odro_list= self.preprocess(drone_state, drone_state_list, obs_list)##获取建筑物障碍物与冲突无人机列表 preprocess函数还没改
 
 
         action = np.squeeze(action)
@@ -59,9 +59,9 @@ class rvo_inter(reciprocal_vel_obs):
 
         return obs_vo_list_nm, vo_flag, min_exp_time, collision_flag
     
-    def config_vo_reward(self, drone_state, odro_state_list, obs_list, action=np.zeros((2,)), **kwargs):
+    def config_vo_reward(self, drone_state, drone_state_list, obs_list, action=np.zeros((2,)), **kwargs):
 
-        ob_list, odro_list= self.preprocess(drone_state, odro_state_list, obs_list)
+        ob_list, odro_list= self.preprocess(drone_state, drone_state_list, obs_list)
 
         vo_list = list(map(lambda x: self.config_vo_circle2(drone_state, x, action, **kwargs), odro_list))
 
@@ -85,9 +85,9 @@ class rvo_inter(reciprocal_vel_obs):
 
         
 
-    def config_vo_observe(self, drone_state, odro_state_list, obs_list):
+    def config_vo_observe(self, drone_state, drone_state_list, obs_list):
 
-        vo_list, _, _, _ = self.config_vo_inf(drone_state, odro_state_list, obs_list)
+        vo_list, _, _, _ = self.config_vo_inf(drone_state, drone_state_list, obs_list)
         
         return vo_list
 

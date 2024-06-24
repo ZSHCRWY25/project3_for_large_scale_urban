@@ -1,5 +1,5 @@
 from envs.env_base import env_base
-from math import sqrt, pi
+from math import sqrt, pi, acos, degrees
 from gym import spaces
 from envs.rvo_inter import rvo_inter
 import numpy as np
@@ -21,11 +21,11 @@ class ir_gym(env_base):
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(5,), dtype=np.float32)#观测空间为5维
         self.action_space = spaces.Box(low=np.array([-1, -1, -1]), high=np.array([1, 1, 1]), dtype=np.float32)#动作空间为3维，范围在[-1, 1]之间
         
-        self.reward_parameter = kwargs.get('reward_parameter', (0.2, 0.1, 0.1, 0.2, 0.2, 1, -20, 20)) #：奖励函数的参数
+        self.reward_parameter = kwargs.get('reward_parameter', (0.2, 0.1, 0.1, 0.2, 0.2, 1, -20, 20, 50)) #：奖励函数的参数
         self.acceler = acceler
         self.arrive_flag_cur = False#到达标志
 
-        self.rvo_state_dim = 8#RVO（Reciprocal Velocity Obstacles）状态维度
+        self.rvo_state_dim = 8#RVO（Reciprocal Velocity Obstacles）状态维度   这个要不要改啊....
         
 
     def cal_des_list(self):#计算机器人的全向移动（omni-directional）的目标速度列表。(改完)
@@ -40,13 +40,12 @@ class ir_gym(env_base):
 
         return rvo_reward_list
     
-    def rvo_reward_cal(self, drone_state, odro_state_list, obs_list, action, reward_parameter=(0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20), **kwargs):#计算机器人的 RVO 奖励（要不要加建筑物）
-        
+    def rvo_reward_cal(self, drone_state, odro_state_list, obs_list, action, reward_parameter=(0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20, 50), **kwargs):#计算机器人的 RVO 奖励（要不要加建筑物）
         vo_flag, min_exp_time, min_dis = self.rvo.config_vo_reward(drone_state, odro_state_list, obs_list, action, **kwargs)
 
         des_vel = np.round(np.squeeze(drone_state[-3:]), 1)
          
-        p1, p2, p3, p4, p5, p6, p7, p8 = reward_parameter
+        p1, p2, p3, p4, p5, p6, p7, p8, p9 = reward_parameter
 
         dis_des = sqrt((action[0] - des_vel[0] )**2 + (action[1] - des_vel[1])**2+(action[2] - des_vel[2] )**2)
         max_dis_des = 3
@@ -86,7 +85,7 @@ class ir_gym(env_base):
        # 计算机器人的内部观测和外部观测。
        # 返回观测、奖励、完成标志和其他信息。
 
-        drone_state = drone.set_state()
+        drone_state = drone.state()
         des_vel = np.squeeze(drone.cal_des_vel())
        
         done = False
@@ -97,13 +96,19 @@ class ir_gym(env_base):
         else:
             arrive_reward_flag = False
 
-        obs_vo_list, vo_flag, min_exp_time, collision_flag = self.rvo.config_vo_inf(self, drone_state, odro_state_list, obs_list, action, **kwargs)
+        if drone.destination_arrive() and not drone.destination_arrive_flag:
+            drone.destination_arrive_flag = True
+            destination_arrive_reward_flag = True
+        else:
+            destination_arrive_reward_flag = False
 
-        radian = drone.state[6]
+        obs_vo_list, vo_flag, min_exp_time, collision_flag = self.rvo.config_vo_inf(self, drone_state, odro_state_list, obs_list, action, **kwargs)# obs_vo_list_nm, vo_flag, min_exp_time, collision_flag
+
+        radian = drone.state[6]# state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
         cur_vel = np.squeeze(drone.vel)
-        radius = robot.radius_collision* np.ones(1,)
+        radius = drone.radius_collision* np.ones(1,)
 
-        propri_obs = np.concatenate([ cur_vel, des_vel, radian, radius]) ##内部观测
+        propri_obs = np.concatenate([cur_vel, des_vel, radian, radius]) ##内部观测
         
         if len(obs_vo_list) == 0:
             exter_obs = np.zeros((self.rvo_state_dim,))
@@ -113,24 +118,26 @@ class ir_gym(env_base):
         observation = np.round(np.concatenate([propri_obs, exter_obs]), 2)##链接
 
         # dis2goal = sqrt( robot.state[0:2] - robot.goal[0:2])
-        mov_reward = self.mov_reward(collision_flag, arrive_reward_flag, self.reward_parameter, min_exp_time)
+        mov_reward = self.mov_reward(collision_flag, arrive_reward_flag, destination_arrive_reward_flag, self.reward_parameter, min_exp_time)
 
         reward = mov_reward
 
         done = True if collision_flag else False
-        info = True if robot.arrive_flag else False
+        info = True if drone.arrive_flag else False
+        finish = True if drone.destination_arrive_flag else False
         
-        return [observation, reward, done, info]
+        return [observation, reward, done, info, finish]
 
-    def mov_reward(self, collision_flag, arrive_reward_flag, reward_parameter=(0.2, 0.1, 0.1, 0.2, 0.2, 1, -20, 15), min_exp_time=100, dis2goal=100):#计算机器人的移动奖励,根据碰撞标志、到达标志和其他参数计算奖励。
+    def mov_reward(self, collision_flag, arrive_reward_flag, destination_arrive_reward_flag, reward_parameter=(0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20, 20), min_exp_time=100, dis2goal=100):#计算机器人的移动奖励,根据碰撞标志、到达标志和其他参数计算奖励。
 
-        p1, p2, p3, p4, p5, p6, p7, p8 = reward_parameter
+        p1, p2, p3, p4, p5, p6, p7, p8, p9 = reward_parameter
 
         collision_reward = p7 if collision_flag else 0
         arrive_reward = p8 if arrive_reward_flag else 0
+        destination_arrive_reward = p9 if destination_arrive_reward_flag else 0
         time_reward = 0
         
-        mov_reward = collision_reward + arrive_reward + time_reward
+        mov_reward = collision_reward + arrive_reward + time_reward + destination_arrive_reward
 
         return mov_reward
 
@@ -141,35 +148,37 @@ class ir_gym(env_base):
         if len(state_list) < 3:#状态列表 state_list,三个以上
             return 0
 
-        for i in range(len(state_list) - 1):#计算相邻状态之间的角度变化（差值）
-            dif = ir_gym.wraptopi(state_list[i+1][2, 0] - state_list[i][2, 0])
+        for i in range(1,len(state_list) - 1):#计算相邻状态之间的角度变化（差值）
+            angle1 = self.calculate_angle_between_vectors(state_list[i+1][3:6], state_list[i][3:6])#[x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
+            angle2 = self.calculate_angle_between_vectors(state_list[i][3:6], state_list[i-1][3:6])
+            dif = self.wraptopi(angle1 - angle2)
             dif_rad_list.append(round(dif, 2))
-
-        for j in range(len(dif_rad_list)-3):
             
-            if dif_rad_list[j] * dif_rad_list[j+1] < -0.05 and dif_rad_list[j+1] * dif_rad_list[j+2] < -0.05 and dif_rad_list[j+2] * dif_rad_list[j+3] < -0.05:#如果连续三个状态的角度变化方向相反（例如从正转到负，再到正），则判断机器人出现了振荡
-                print('osc', dif_rad_list[j], dif_rad_list[j+1], dif_rad_list[j+2], dif_rad_list[j+3])
-                return -10
+        for j in range(len(dif_rad_list) - 3):  
+            # 检测连续三个角度变化的方向是否相反   
+            if (dif_rad_list[j] > 0 and dif_rad_list[j+1] < 0 and dif_rad_list[j+2] > 0) or \
+                (dif_rad_list[j] < 0 and dif_rad_list[j+1] > 0 and dif_rad_list[j+2] < 0):
+                print('osc', dif_rad_list[j], dif_rad_list[j+1], dif_rad_list[j+2], dif_rad_list[j+3])  
+                return -10  
         return 0
 
-    def observation(self, robot, nei_state_list, obs_circular_list, obs_line_list):#计算机器人的观测，基于其状态、邻居状态、圆形障碍物状态和线段障碍物状态
+    def observation(self, drone,  drone_state_list, obs_list):#计算机器人的观测，基于其状态、邻居状态、圆形障碍物状态和线段障碍物状态
 
-        robot_omni_state = robot.omni_state()#提取机器人的当前速度、期望速度、方向角和碰撞半径
-        des_vel = np.squeeze(robot_omni_state[-2:])
+        drone_state = drone.state() #提取机器人的当前速度、期望速度、方向角和碰撞半径
+        des_vel = np.squeeze(drone_state[-3:])# state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
         
-        obs_vo_list, _, min_exp_time, _ = self.rvo.config_vo_inf(robot_omni_state, nei_state_list, obs_circular_list, obs_line_list)#如果存在速度障碍物（VO），还计算外部观测
-    
-        cur_vel = np.squeeze(robot.vel_omni)
-        radian = robot.state[2]
-        radius = robot.radius_collision* np.ones(1,)
+        obs_vo_list, _, min_exp_time, _ = self.rvo.config_vo_inf(drone_state,  drone_state_list, obs_list)#如果存在速度障碍物（VO），还计算外部观测
+        cur_vel = np.squeeze(drone.vel)
+        radian = drone.state[6]
+        radius = drone.radius_collision* np.ones(1,)
 
         if len(obs_vo_list) == 0:
             exter_obs = np.zeros((self.rvo_state_dim,))
         else:
-            exter_obs = np.concatenate(obs_vo_list) # vo list
+            exter_obs = np.concatenate(obs_vo_list) # vo list外部观测变量
 
         
-        propri_obs = np.concatenate([ cur_vel, des_vel, radian, radius]) 
+        propri_obs = np.concatenate([ cur_vel, des_vel, radian, radius]) #内部变量
         observation = np.round(np.concatenate([propri_obs, exter_obs]), 2)#将内部和外部观测连接成最终的观测向量。
 
         return observation
@@ -202,4 +211,24 @@ class ir_gym(env_base):
             theta = theta + 2*pi
 
         return theta
+    
+    @staticmethod
+    def calculate_angle_between_vectors(A, B):
+
+        # 计算向量A和B的模  
+        mag_A = sqrt(A[0]**2 + A[1]**2 + A[2]**2)  
+        mag_B = sqrt(B[0]**2 + B[1]**2 + B[2]**2)  
+      
+        # 计算向量A和B的点积  
+        dot_product = A[0] * B[0] + A[1] * B[1] + A[2] * B[2]  
+      
+        # 计算夹角的余弦值  
+        cos_theta = dot_product / (mag_A * mag_B)  
+      
+        # 计算夹角（以弧度为单位）  
+        theta_radians = acos(cos_theta)  
+      
+      
+        return theta_radians
+    
     

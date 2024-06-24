@@ -8,19 +8,18 @@ from collections import namedtuple
 # rvo_vel: [x, y, z, ve_x, ve_y, ve_z, α]速度障碍物存储形式
 import numpy as np  
   
-class Drone:  
-    def __init__(self, id, starting, destination, waypoints, n_points, init_acc,components,priority, dt=1,    
-                 vel=np.zeros((3, 1)), vel_max=2*np.ones((3, 1)), goal_threshold=0.1, radius=5, **kwargs):  
+class Drone():  
+    def __init__(self, id, starting, destination, waypoints, n_points, init_acc,priority, dt=1,    
+                 vel=np.zeros((3,)), vel_max=2*np.ones((3,)), goal_threshold=0.1, radius=1, **kwargs):  
   
         self.id = int(id)  # 无人机编号  
-        self.previous_state = self.state.copy()  
   
-        self.vel = np.array(vel, ndmin=2) if not isinstance(vel, np.ndarray) else vel  # 速度  
-        self.vel_max = np.array(vel_max, ndmin=2) if not isinstance(vel_max, np.ndarray) else vel_max  # 速度上限  
+        self.vel = np.array(vel) if not isinstance(vel, np.ndarray) else vel  # 速度  
+        self.vel_max = np.array(vel_max) if not isinstance(vel_max, np.ndarray) else vel_max  # 速度上限  
   
         # 转换starting和destination为NumPy数组  
-        self.starting = np.array(starting, ndmin=2) if isinstance(starting, list) else starting 
-        self.destination = np.array(destination, ndmin=2) if isinstance(destination, list) else destination
+        self.starting = np.array(starting)if isinstance(starting, list) else starting 
+        self.destination = np.array(destination)if isinstance(destination, list) else destination
 
         self.state =  self.starting
   
@@ -32,28 +31,29 @@ class Drone:
   
         # 当前目标点，初始化为destination或者waypoints的第二个点 （waypoints）
         if len(waypoints) > 0:  
-            self.current_des = np.array(waypoints[1], ndmin=2)  
+            self.current_des = np.array(waypoints[1])
         else:  
             self.current_des = destination
 
         self.i = 1  
-  
+        self.previous_state = self.state.copy()  
         self.acc = init_acc  # 加速度  
         self.dt = dt  # 时间步长  
         self.radius = radius  # 半径  
   
-        self.arrive_flag = False  # 到达标志  
+        self.arrive_flag = False  # 到达标志 
+        self.destination_arrive_flag = False# 
         self.collision_flag = False  # 碰撞标志  
         self.goal_threshold = goal_threshold  # 到达目标的阈值 
 
-        self.components = components 
+        #self.components = components 
         self.radius_collision = round(radius + kwargs.get('radius_exp', 1), 2)  # 碰撞检测半径
         
         # 添加noise参数，如果kwargs中没有提供，则默认为False  
-        self.__noise = kwargs.get('noise', False)  
+        self.__noise = kwargs.get('noise', True)  
   
         # 添加control_std参数，如果kwargs中没有提供，则使用默认值  
-        self.__control_std = kwargs.get('control_std', [0.01, 0.01, 0.01])  
+        self.__control_std = kwargs.get('control_std', [0.06, 0.06, 0.06])  
 
   
 
@@ -65,24 +65,22 @@ class Drone:
     def move_forward(self, vel, stop=True, **kwargs): 
     
         if isinstance(vel, list):
-            vel = np.array(vel, ndmin=2).T
+            vel = np.array(vel)
 
-        if vel.shape == (3,):
-            vel = vel[:,np.newaxis]
-
-        assert vel.shape == (3, 1)
+        assert vel.shape == (3,)
 
         vel = np.clip(vel, -self.vel_max, self.vel_max)#限制范围
         
         if stop:
             if self.arrive_flag or self.collision_flag:
-                vel = np.zeros((3, 1))
+                vel = np.zeros(3,)
 
+        #print("move_forward_vel = ",vel) 
 
         self.previous_state = self.state
         self.move(vel, self.__noise, self.__control_std)
-
         self.arrive(self.state, self.current_des)
+        return self.arrive_flag
 
 
     def current_des_new(self, E3d, map_size):  
@@ -91,30 +89,39 @@ class Drone:
                 next_waypoint = self.waypoints[self.i + 1]  
                 if line_sight_partial_3D(E3d, (self.state[0], next_waypoint[0]),  (self.state[1], next_waypoint[1]),  (self.state[2], next_waypoint[2]),  map_size) == 1:  
                     self.i += 1  
-                    self.current_des = np.array(next_waypoint, ndmin=2)  
-            else:  
-                self.arrive_flag = True
+                    self.current_des = np.array(next_waypoint)  
+             
 
-    def move(self, vel, noise=False, std=None):  
+    def change_current_des(self, E3d, map_size):###加到move_forward
+        if self.arrive(self.state, self.current_des):
+            self.current_des_new(self, E3d, map_size)
+
+    
+
+    def move(self, vel, noise=True, std=None):  
         if std is None:  
             std = self.__control_std
-        next_state = self.motion(self.state, vel, self.dt, noise, std)  
+        #print(self.state)
+        next_state = self.motion(vel, noise, std)  
         self.state = next_state  
         self.vel = vel 
 
 
-    def motion(current_state, vel, sampletime, noise = False, control_std = None):
+    def motion(self, vel, noise = True, control_std = None):
+        current_state = self.state
+        sampletime = self.dt
         if control_std is None:  
-            control_std = [0.01, 0.01, 0.01]
+            control_std = [0.06, 0.06, 0.06]
     # vel: np.array([[vel x], [vel y],[vel z]])
     # current_state: np.array([[x], [y], [z]])
 
         if noise:  
-            vel_noise = vel + np.random.normal(np.zeros((3, 1)), scale=np.array(control_std).reshape((3, 1)))  
+            vel_noise = np.round(vel + np.random.normal(np.zeros((3,)), scale=np.array(control_std)),2) 
         else:  
-            vel_noise = vel  
-  
-        next_state = current_state + vel_noise * sampletime  
+            vel_noise = np.round(vel)  
+        #print("motion_vel=",vel_noise)
+        next_state = current_state + vel_noise * sampletime
+        #print("nextstate",next_state)   
         return next_state
 
     def arrive(self, current_position, current_des):
@@ -127,9 +134,21 @@ class Drone:
             return True
         else:
             self.arrive_flag = False
-            return False 
+            return False
+        
+    def destination_arrive(self,current_position):
+        position = current_position[0:3]
+        dist = np.linalg.norm(position - self.destination[0:3]) 
+
+        if dist < self.goal_threshold:
+            self.destination_arrive_flag = True
+            return True
+        else:
+            self.destination_arrive_flag = False
+            return False
     
     def move_to_goal(self):
+
         vel = self.cal_des_vel()
         self.move_forward(vel) 
 
@@ -140,14 +159,14 @@ class Drone:
         if dis > self.goal_threshold:  
             # 假设 self.vel_max 是一个长度为3的列表或numpy数组，代表x, y, z三个方向的最大速度  
             # 将角度转换为单位方向向量  
-            dir_vector = self.angles_to_direction(angles)  
+            dir_vector = np.round(self.angles_to_direction(angles),2)
               
             # 缩放单位方向向量到最大速度  
             vel_scaled = np.multiply(self.vel_max, dir_vector)  
-            vel = vel_scaled.reshape((3, 1))  # 确保是(3, 1)形状的  
+            vel = np.array(vel_scaled,(3,))  # 确保是(3,)形状的  
         else:    
-            vel = np.zeros((3, 1)) 
-  
+            vel = np.zeros(3,)
+        print("des_vel",vel)
         return vel
     
 ############################################## circle = namedtuple('circle', 'x y z r')这里闹不清楚
@@ -210,14 +229,16 @@ class Drone:
                     return True    
    
 
-    def set_state(self):
+    def state(self):
         v_des = self.cal_des_vel()
-        rc_array = self.radius_collision * np.ones((1,1))
-            
-        return np.concatenate((self.state[0:3], self.vel, rc_array, v_des), axis = 0)
+        rc_array = np.array([self.radius_collision])
+        priority = np.array(self.priority)
+        # state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
+        #return np.concatenate((self.state, self.vel, rc_array,priority, v_des), axis = 0)
+        return np.concatenate((self.state, self.vel, [rc_array[0]],[priority[0]], v_des), axis = 0)
 
     def obs_state(self):
-        rc_array = self.radius * np.ones((1,1))
+        rc_array = self.radius * np.ones((1,))
         return np.concatenate((self.state[0:3], self.vel, rc_array), axis = 0) 
 
 
@@ -225,7 +246,7 @@ class Drone:
 
         self.state[:] = self.starting
         self.previous_state[:] = self.starting
-        self.vel = np.zeros((3, 1))
+        self.vel = np.zeros((3,))
         self.arrive_flag = False
         self.collision_flag = False
 
@@ -272,9 +293,7 @@ class Drone:
     @staticmethod  
     def relative(state1, state2):  
         dif = np.array(state2[0:3]) - np.array(state1[0:3])  
-  
         dis = np.linalg.norm(dif)  # 计算向量长度（范数）  
-          
         # 计算与x轴的夹角（方位角）和与z轴的夹角（俯仰角）  
         # 这里使用np.arctan2来避免除以0的情况，并自动处理四个象限  
         azimuth = np.arctan2(dif[1], dif[0])  # 方位角（绕z轴旋转）  
@@ -342,3 +361,10 @@ class Drone:
   
 # 注意：在实际应用中，可能还需要考虑无人机的当前姿态（如翻滚、偏航和俯仰角）  
 # 来计算真正的期望速度向量。这里的代码仅提供了基本的计算框架 """
+
+
+##测试一下
+# test_drone = Drone(id=1, starting = [0, 0, 0], destination = [10,10,10], waypoints = [[0,0,0],[10,10,10]], n_points = 2, init_acc = 1,priority=1, dt=1,    
+#                  vel=np.zeros((3,)), vel_max=[4,4,4], goal_threshold=2, radius=1)
+
+# test_drone.move_to_goal()
