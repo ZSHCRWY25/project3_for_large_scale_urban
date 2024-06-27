@@ -16,7 +16,7 @@ class post_train:
         self.reset_mode = reset_mode#重置环境
         self.render=render#是否渲染环境
         self.save=save#是否保存结果或数据
-        self.robot_number = self.env.ir_gym.robot_number
+        self.robot_number = self.env.ir_gym.Drone_number
         self.step_time = self.env.ir_gym.step_time
 
         self.inf_print = kwargs.get('inf_print', True)

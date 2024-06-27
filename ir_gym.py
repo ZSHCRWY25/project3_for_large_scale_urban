@@ -1,4 +1,4 @@
-from envs.env_base import env_base
+from envs.env.env_base import env_base
 from math import sqrt, pi, acos, degrees
 from gym import spaces
 from envs.rvo_inter import rvo_inter
@@ -228,6 +228,15 @@ class ir_gym(env_base):
             observation_list.append((observation))
 
         return observation_list
+    
+    def render(self, time=0.05, **kwargs):
+
+        if self.plot:
+            self.world_plot.com_cla()
+            self.world_plot.draw_dyna_components(**kwargs)
+            self.world_plot.pause(time)
+            
+        self.time = self.time + time
 
     @staticmethod
     def wraptopi(theta):
@@ -258,4 +267,5 @@ class ir_gym(env_base):
       
       
         return theta_radians
+    
     

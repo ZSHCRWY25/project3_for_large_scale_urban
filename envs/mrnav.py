@@ -26,18 +26,18 @@ class mrnav(gym.Env):
         
         return obs_list, reward_list, done_list, info_list
 
-    def render(self, mode = 'human', save=False, path=None, i = 0, **kwargs):
+    def render(self, mode = 'human', save=False, path=None, i = 0, **kwargs):##没改
         self.ir_gym.render(0.01, **kwargs)
 
         if save:
             self.ir_gym.save_fig(path, i) 
 
-    def reset(self, mode=0, **kwargs):
+    def reset(self):
         # mode = kwargs.get('mode', 0)
-        return self.ir_gym.env_reset(mode, circular = self.circular, square=self.square, interval=self.interval, **kwargs)
+        return self.ir_gym.env_reset()
 
     def reset_one(self, id):
-        self.ir_gym.components['robots'].robot_reset(id)
+        self.ir_gym.components['robots'].drone_reset(id)
 
-    def show(self):
+    def show(self):#没改
         self.ir_gym.show()

@@ -1,6 +1,6 @@
 import numpy as np
 from math import sin, cos, atan2, pi, sqrt
-from line_sight_partial_3D import line_sight_partial_3D
+from env.line_sight_partial_3D import line_sight_partial_3D
 from collections import namedtuple
 # state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
 # moving_state_list: [[x, y, z, vx, vy, vz, radius, prb]]其他无人机
