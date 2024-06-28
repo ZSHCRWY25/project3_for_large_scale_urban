@@ -8,12 +8,13 @@ from matplotlib import image
 import matplotlib.pyplot as plt  
 from mpl_toolkits.mplot3d import Axes3D  
 from mpl_toolkits.mplot3d import proj3d  
-from matplotlib.patches import FancyArrow3D  
 from math import cos, sin, pi
 from pathlib import Path
 import inspect
 import matplotlib.transforms as mtransforms
-from matplotlib.patches import Polygon
+from matplotlib.animation import FuncAnimation  
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox  
+from PIL import Image
 
 class env_plot:
     def __init__(self, map_size, building_list, lenth= 10, width=10, height=10, components=dict(),  
@@ -42,6 +43,7 @@ class env_plot:
         self.drone_plot_list = []
         self.vel_line_list = []
 
+
         self.init_plot(**kwargs)
 
         if full:#full为True，则尝试将图形窗口设置为全屏模式（根据操作系统）。
@@ -56,12 +58,14 @@ class env_plot:
         self.ax.set_aspect('equal')#确保x和y轴的比例相
         self.ax.set_xlim(self.offset_x, self.offset_x + self.width)#设置x和y轴的限制，使用offset_x和offset_y进行偏移
         self.ax.set_ylim(self.offset_y, self.offset_y + self.height)
-        self.ax.set_xlabel("x [m]")#设置x和y轴的标签
+        self.ax.set_xlabel("x [m]")#设置轴的标签
         self.ax.set_ylabel("y [m]")
+        self.ax.set_zlabel("z [m]")
 
         current_file_frame = inspect.getfile(inspect.currentframe())
-        car_image_path = Path(current_file_frame).parent / 'car0.png'
-        self.init_car_img = image.imread(str(car_image_path)) #加载汽车图像
+        drone_image_path = Path(current_file_frame).parent / 'drone0.png'
+        self.drone_img = Image.open(drone_image_path)  
+        self.drone_img_box = OffsetImage(self.drone_img, zoom=0.05)
 
         self.plot_buildings_on_map(self.map_size, self.building_list)#绘制环境的静态组件
         drones = self.components.get('robots', None)
@@ -80,7 +84,7 @@ class env_plot:
         # 设置地图的x和y轴范围  
         ax.set_xlim(-x_range/2, x_range/2)  
         ax.set_ylim(-y_range/2, y_range/2)  
-        ax.set_zlim(0, max(b[2] for b in buildings) + 0.1)  # z轴范围基于建筑物最高度+一点额外空间  
+        ax.set_zlim(0, max(b[2] for b in buildings) + 5)  # z轴范围基于建筑物最高度+一点额外空间  
       
         # 绘制每个建筑物（圆柱体）  
         for b in buildings:  
@@ -100,10 +104,17 @@ class env_plot:
             ax.plot_surface(X, Y, Z, linewidth=0, facecolor='b', shade=True, alpha=0.6)
             plt.gca().set_prop_cycle(None)   
       
-            # 添加坐标轴标签  
-            ax.set_xlabel('X')  
-            ax.set_ylabel('Y')  
-            ax.set_zlabel('Z')  
+    def draw_waypoints(drone):
+        middle_waypoints = drone.waypoints[1:-1]  
+ 
+        x = [wp[0] for wp in middle_waypoints]  
+        y = [wp[1] for wp in middle_waypoints]  
+        z = [wp[2] for wp in middle_waypoints] 
+        ax = plt.figure().add_subplot(111,projection='3d')
+
+        ax.scatter(x, y, z,c='r',marker='o')
+        for i in range(len(x)):
+            ax.text(x[i],y[i],z[i],str(i), zdir='y')
 
 
     def draw_drones(self):#改完
@@ -115,29 +126,24 @@ class env_plot:
 
     def draw_drone(self, drone, drone_color = 'g', destination_color='r', show_vel=True, show_goal=True, show_text=True, show_traj=False, traj_color='-g', **kwargs):
         
-        x = drone.state[0]
-        y = drone.state[1]
-        z = drone.state[2]
-        
-        goal_x = drone.destination[0]
-        goal_y = drone.destination[1]
-        goal_z = drone.destination[2]
-
-        drone_sphere = plt.sphere((x, y, z), drone.radius, color=drone_color) 
-        self.ax.scatter([x], [y], [z], color=drone_color)  
-
-        goal_sphere = plt.sphere((goal_x, goal_y, goal_z), drone.radius, color=destination_color, alpha=0.5)  # 同样使用球体代替圆  
-        self.ax.scatter([goal_x], [goal_y], [goal_z], color=destination_color, alpha=0.5)  
+        x, y, z = drone.state[:3]  
+        goal_x, goal_y, goal_z = drone.destination  
   
+        # 绘制无人机位置（使用散点图或其他方法）  
+        self.ax.scatter(x, y, z, c=drone_color, marker='^', label=f'Drone {drone.id}')  
+  
+        # 绘制目标位置（使用散点图模拟球体）  
+        self.ax.scatter(goal_x, goal_y, goal_z, c=destination_color, s=100, alpha=0.5)  # 增大s参数以模拟球体  
+    
         
         if show_goal:  
             if show_text:  
-                self.ax.text(goal_x + 0.3, goal_y, goal_z, 'G' + str(drone.id), fontsize=12, color='k')  
+                self.ax.text(goal_x + 0.3, goal_y, goal_z, 'G' + str(drone.id), fontsize=12, color='k',zorder=5)  
             # 这里不将球体添加到drone_plot_list，因为它们是使用scatter绘制的点
 
 
         if show_text:  
-            self.ax.text(x - 0.5, y, z, 'D' + str(drone.id), fontsize=10, color='k')  
+            self.ax.text(x - 0.5, y, z, 'D' + str(drone.id), fontsize=10, color='k',  zorder=5)  # 同样确保文本可见  )  
   
         if show_traj:  
             x_list = [drone.previous_state[0], drone.state[0]]  
@@ -152,8 +158,6 @@ class env_plot:
             self.ax.add_artist(a)  
             self.drone_plot_list.append(a)
 
-         # 更新绘图  
-        plt.draw()
 
     def draw_vector(self, x, y, z, vel_x, vel_y, vel_z, color='r'):  
         vel_tt = vel_x + vel_y + vel_z
@@ -161,7 +165,7 @@ class env_plot:
         # 绘制箭头
         self.ax.quiver(x,y,z,dx,dy,dz)
 
-    def draw_trajectory(self, traj, color='g', label='trajectory', show_direction=False, refresh=False):  
+    def draw_trajectory(self, traj, color='g', label='trajectory', show_direction=False, refresh=False):  ############改到这里
         # traj 应该是一个形状为 (num_points, 3) 的 NumPy 数组  
         path_x_list = traj[:, 0]  
         path_y_list = traj[:, 1]  
@@ -183,20 +187,9 @@ class env_plot:
                     x, y, z = traj[i, :3]  # 提取点的坐标  
                     dx, dy, dz = dx_list[i], dy_list[i], dz_list[i]  # 提取方向向量的分量  
                     self.draw_vector(x, y, z, dx, dy, dz, color='b')  # 使用蓝色箭头表示方向  
-  
+  #####################
         plt.show()
 
-    def draw_waypoints(drone):
-        middle_waypoints = drone.waypoints[1:-1]  
- 
-        x = [wp[0] for wp in middle_waypoints]  
-        y = [wp[1] for wp in middle_waypoints]  
-        z = [wp[2] for wp in middle_waypoints] 
-        ax = plt.figure().add_subplot(111,projection='3d')
-
-        ax.scatter(x, y, z,c='r',marker='o')
-        for i in range(len(x)):
-            ax.text(x[i],y[i],z[i],str(i), zdir='y')
 
 
 

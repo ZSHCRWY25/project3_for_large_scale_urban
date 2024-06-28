@@ -1,4 +1,7 @@
-import matplotlib.pyplot as plt
+
+
+
+
 
 import matplotlib.pyplot as plt  
 from matplotlib.animation import FuncAnimation  
@@ -9,8 +12,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 fig = plt.figure()
 ax = fig.add_subplot(111,projection='3d')
-x,y,z = 0,0,0
-dx,dy,dz =0.5,0.5,0.5 
+x,y,z = 5,5,5
+dx,dy,dz =2,1,3 
 # 绘制箭头
 ax.quiver(x,y,z,dx,dy,dz)
 # 设置华标釉范围
