@@ -8,7 +8,7 @@
 import numpy as np
 from math import sin, cos, atan2, asin, pi, inf, sqrt
 from time import time
-from vel_obs3D import get_alpha, get_PAA,  get_rvo_array, get_beta, cal_exp_tim 
+from envs.vel_obs.vel_obs3D import get_alpha, get_PAA,  get_rvo_array, get_beta, cal_exp_tim 
 # state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
 # moving_state_list: [[x, y, z, vx, vy, vz, radius, prb]]其他无人机
 # obstacle_state_list: [[x, y, z, radius]]建筑物障碍物
@@ -25,9 +25,9 @@ class reciprocal_vel_obs:
         self.nr = neighbor_region
         self.delta_t = delta_t
 
-    def cal_vel(self, agent_state, dro_state_list, obs_list, mode = 'rvo'):
+    def cal_vel(self, agent_state, dro_state_list,  building_list, mode = 'rvo'):
         
-        agent_state, ob_list, odro_list= self.preprocess(agent_state, dro_state_list, obs_list)##获取建筑物障碍物与冲突无人机列表
+        odro_list, obs_list= self.preprocess(agent_state, dro_state_list, building_list)##获取建筑物障碍物与冲突无人机列表
 
 
         vo_list = self.config_vo(agent_state, odro_list)##分别检测无人机互易速度障碍物
@@ -37,13 +37,28 @@ class reciprocal_vel_obs:
         rvo_vel = self.vel_select(agent_state, vo_outside, vo_inside, vo_list)##选择速度
         return rvo_vel
 
-    def preprocess(self, agent_state, dro_state_list, obs_list):
+    def preprocess(self, agent_state, dro_state_list, building_list):
         # 检测范围内障碍物
         #待填充 
-        dro_state_list = []
-        obs_list = []        
+        odro_list=[]
+        obs_list = []  
+        agent_state = np.array(agent_state[0:3])
+        for drone in  dro_state_list:
+            drone_state = np.array(drone[0:3])
+            dif = agent_state-drone_state
+            dis = np.linalg.norm(dif)
+            if dis <= 10:
+                odro_list.append(drone)
 
-        return agent_state, dro_state_list, obs_list
+        for building in building_list:
+            building_state = np.array(building)
+            if building_state[2] > agent_state[2] - 1:
+                diff = agent_state[0:2] - building_state[0:2]
+                diss = np.linalg.norm(diff)
+                if diss <= 10:
+                    obs_list.append(building)
+
+        return odro_list, obs_list
 
     def config_vo(self, agent_state, odro_list, mode):
         # mode: vo, rvo, hrvo

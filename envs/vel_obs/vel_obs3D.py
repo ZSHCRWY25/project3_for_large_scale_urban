@@ -192,32 +192,32 @@ def norm(x):
         return a
 
     
-#####测试一下
-P_dr = [[12, 34, 27],
-            [48, 19, 42],
-            [7, 8, 15],
-            [33, 45, 5],
-            [25, 2, 38]]##随机生成五个无人机位置
+# #####测试一下
+# P_dr = [[12, 34, 27],
+#             [48, 19, 42],
+#             [7, 8, 15],
+#             [33, 45, 5],
+#             [25, 2, 38]]##随机生成五个无人机位置
 
-V_dr = [[4.5, 5.8,1.7],
-        [4.1, 3.2, 1.9],
-        [1.5, 2.7, 3.4],
-        [3.9, 1.2, 4.6],
-        [5.8, 4.3, 2.1]]##随机速度
+# V_dr = [[4.5, 5.8,1.7],
+#         [4.1, 3.2, 1.9],
+#         [1.5, 2.7, 3.4],
+#         [3.9, 1.2, 4.6],
+#         [5.8, 4.3, 2.1]]##随机速度
 
-r = [2.5,2.5,2.5,2.5,2.5]##半径
+# r = [2.5,2.5,2.5,2.5,2.5]##半径
 
-for i in range(5):
-    for j in range(i+1,5):
-        alpha = get_alpha(P_dr[i], P_dr[j], r[i], r[j])*(180/pi)
-        PAA = get_PAA(P_dr[i], 2, 2, V_dr[i], V_dr[j])
-        beta = get_beta(P_dr[i], P_dr[j], PAA, V_dr[j], V_dr[i], 1)
-        v = list(map(lambda x,y: x-y, V_dr[i],V_dr[j]))
-        rel_x = P_dr[i][0] - P_dr[j][0]
-        rel_y = P_dr[i][1] - P_dr[j][1]
-        rel_z = P_dr[i][2] - P_dr[j][2]
-        rel_vx = V_dr[i][0] -  V_dr[j][0]
-        rel_vy = V_dr[i][1] -  V_dr[j][1]
-        rel_vz = V_dr[i][2] -  V_dr[j][2]
-        tim = cal_exp_tim(rel_x, rel_y, rel_z, rel_vx, rel_vy, rel_vz, 20)
-        print(alpha, PAA, v, tim)##角度是一半##取整
+# for i in range(5):
+#     for j in range(i+1,5):
+#         alpha = get_alpha(P_dr[i], P_dr[j], r[i], r[j])*(180/pi)
+#         PAA = get_PAA(P_dr[i], 2, 2, V_dr[i], V_dr[j])
+#         beta = get_beta(P_dr[i], P_dr[j], PAA, V_dr[j], V_dr[i], 1)
+#         v = list(map(lambda x,y: x-y, V_dr[i],V_dr[j]))
+#         rel_x = P_dr[i][0] - P_dr[j][0]
+#         rel_y = P_dr[i][1] - P_dr[j][1]
+#         rel_z = P_dr[i][2] - P_dr[j][2]
+#         rel_vx = V_dr[i][0] -  V_dr[j][0]
+#         rel_vy = V_dr[i][1] -  V_dr[j][1]
+#         rel_vz = V_dr[i][2] -  V_dr[j][2]
+#         tim = cal_exp_tim(rel_x, rel_y, rel_z, rel_vx, rel_vy, rel_vz, 20)
+#         print(alpha, PAA, v, tim)##角度是一半##取整

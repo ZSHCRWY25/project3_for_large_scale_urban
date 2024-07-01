@@ -5,17 +5,17 @@
 :@LastEditTime: 2024/6/12 11:00:18
 :Description: 
 '''
-import reciprocal_vel_obs
-from math import sqrt, atan2, asin, sin, pi, cos, inf
+import envs.vel_obs.reciprocal_vel_obs as reciprocal_vel_obs
+from math import sqrt, atan2, asin, sin, pi, cos, inf, acos
 import numpy as np
-from vel_obs3D import get_alpha, get_PAA,  get_rvo_array, get_beta, cal_vo_exp_tim
+from envs.vel_obs.vel_obs3D import get_alpha, get_PAA,  get_rvo_array, get_beta, cal_vo_exp_tim
 # state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
 # moving_state_list: [[x, y, z, vx, vy, vz, radius, prb]]其他无人机
 # obstacle_state_list: [[x, y, z, radius]]建筑物障碍物
 # rvo_vel: [x, y, z, ve_x, ve_y, ve_z, α]速度障碍物存储形式
 
 class rvo_inter(reciprocal_vel_obs):
-    def __init__(self, neighbor_region=5, neighbor_num=10, vxmax=1.5, vymax=1.5, vzmax = 1.5, acceler=0.5, env_train=True, exp_radius=0.2, ctime_threshold=5, delta_t = 1):
+    def __init__(self, neighbor_region=5, neighbor_num=10, vxmax=1.5, vymax=1.5, vzmax = 1.5, acceler = 0.3, env_train=True, exp_radius=0.2, ctime_threshold=5, delta_t = 1):
         super(rvo_inter, self).__init__(neighbor_region, vxmax, vymax, vzmax, acceler)
 
         self.env_train = env_train
@@ -24,14 +24,11 @@ class rvo_inter(reciprocal_vel_obs):
         self.ctime_threshold = ctime_threshold
         self.delta_t = delta_t
 
-    def config_vo_inf(self, drone_state, drone_state_list, obs_list, action=np.zeros((3,)), **kwargs):
+    def config_vo_inf(self, drone_state, drone_state_list, building_list, action=np.zeros((3,)), **kwargs):
         # mode: vo, rvo, hrvo
-        ob_list, odro_list= self.preprocess(drone_state, drone_state_list, obs_list)##获取建筑物障碍物与冲突无人机列表 preprocess函数还没改
-
-
+        odro_list, obs_building_list = self.preprocess(drone_state, drone_state_list, building_list)##获取建筑物障碍物与冲突无人机列表（十个）
         action = np.squeeze(action)
-
-        vo_list = list(map(lambda x: self.config_vo_circle2(drone_state, x, action, 'rvo', **kwargs), odro_list))
+        vo_list = list(map(lambda x: self.config_vo_circle2(drone_state, x, action,  **kwargs), odro_list))
         #[observation_vo, vo_flag, exp_time, collision_flag, min_dis ] 
         obs_vo_list = []
         collision_flag = False
@@ -57,19 +54,18 @@ class rvo_inter(reciprocal_vel_obs):
         if self.nm == 0:
             obs_vo_list_nm = []
 
-        return obs_vo_list_nm, vo_flag, min_exp_time, collision_flag
+        return obs_vo_list_nm, vo_flag, min_exp_time, collision_flag, obs_building_list
     
-    def config_vo_reward(self, drone_state, drone_state_list, obs_list, action=np.zeros((2,)), **kwargs):
+    def config_vo_reward(self, drone_state, other_drone_state_list,  building_list, action=np.zeros((2,)), **kwargs):#只检查是否与速度障碍物有冲突，不包括建筑物
 
-        ob_list, odro_list= self.preprocess(drone_state, drone_state_list, obs_list)
+        odro_list, obs_building_list= self.preprocess(drone_state, other_drone_state_list, building_list)
 
-        vo_list = list(map(lambda x: self.config_vo_circle2(drone_state, x, action, **kwargs), odro_list))
-
+        vo_list = list(map(lambda x: self.config_vo_circle2(drone_state, x, action, **kwargs), odro_list))#(self, state, odro, action, **kwargs):
         vo_flag = False
         min_exp_time = inf
         min_dis = inf
 
-        for vo_inf in vo_list:
+        for vo_inf in vo_list:#[observation_vo, vo_flag, exp_time, collision_flag, min_dis]
 
             if vo_inf[4] < min_dis:
                 min_dis = vo_inf[4]
@@ -82,7 +78,33 @@ class rvo_inter(reciprocal_vel_obs):
         
         return vo_flag, min_exp_time, min_dis
 
+    def preprocess(self, drone_state, dro_state_list, building_list):
+        # 检测范围内障碍物
+        #待填充 
+        odro_list=[]
+        obs_building_list = []  
+        self_drone_state = np.array(drone_state[0:3])
+        for drone in  dro_state_list:
+            other_drone_state = np.array(drone[0:3])
+            if self_drone_state == other_drone_state:
+                continue#排除自己
+            dif = self_drone_state -other_drone_state
+            dis = np.linalg.norm(dif)
+            if dis <= 10:
+                odro_list.append(drone)
+#################################################################################################################################
+        for building in building_list:
+            building_state = np.array(building)
+            if building_state[2] > self_drone_state[2] - 2:
+                diff = self_drone_state[0:2] - building_state[0:2]
+                diss = np.linalg.norm(diff)
+                if diss <= 10:
+                    vec = np.array(drone_state[3:6])
+                    angle = self.calculate_angle_between_vectors(diff, vec)
+                    if -pi/4 <= angle <= pi/4:
+                        obs_building_list.append(building)
 
+        return odro_list, obs_building_list
         
 
     def config_vo_observe(self, drone_state, drone_state_list, obs_list):
@@ -91,7 +113,7 @@ class rvo_inter(reciprocal_vel_obs):
         
         return vo_list
 
-    def config_vo_circle2(self, state, odro, action, **kwargs):
+    def config_vo_circle2(self, state, odro, action, **kwargs):#
         
         x, y, z, vx, vy, vz, r = state[0:7]#state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
         Pa = [x, y, z]
@@ -107,7 +129,7 @@ class rvo_inter(reciprocal_vel_obs):
         rel_y = my - y
         rel_z = mz - z
 
-        dis_mr = sqrt((rel_y)**2 + (rel_x)**2 + sqrt(rel_z)**2)
+        dis_mr = sqrt((rel_y)**2 + (rel_x)**2 + (rel_z)**2)
         
         real_dis_mr = sqrt((rel_y)**2 + (rel_x)**2)
         
@@ -179,4 +201,50 @@ class rvo_inter(reciprocal_vel_obs):
         if alpha > beta:
             vector_out = False
         return vector_out
+    @staticmethod
+    def calculate_angle_between_vectors(vec1, vec2):  
+    # 计算点积  
+        dot_product = sum(a*b for a, b in zip(vec1, vec2))  
+      
+        # 计算两个向量的模长  
+        norm_vec1 = sqrt(sum(x**2 for x in vec1))  
+        norm_vec2 = sqrt(sum(x**2 for x in vec2))  
+      
+        # 防止除以零的错误  
+        if norm_vec1 == 0 or norm_vec2 == 0:  
+            return None  # 或者可以抛出一个异常  
+      
+        # 计算夹角（弧度）  
+        angle_rad = acos(dot_product / (norm_vec1 * norm_vec2))
+
+        return angle_rad  
     
+
+    @staticmethod
+    def cal_exp_tim_with_building(rel_x, rel_y, rel_vx, rel_vy, r):
+        # rel_x: xa - xb
+        # rel_y: ya - yb
+
+        # (vx2 + vy2)*t2 + (2x*vx + 2*y*vy)*t+x2+y2-(r+mr)2 = 0
+
+        a = rel_vx ** 2 + rel_vy ** 2
+        b = 2* rel_x * rel_vx + 2* rel_y * rel_vy
+        c = rel_x ** 2 + rel_y ** 2 - r ** 2
+
+        if c <= 0:
+            return 0
+
+        temp = b ** 2 - 4 * a * c
+
+        if temp <= 0:
+            t = inf
+        else:
+            t1 = ( -b + sqrt(temp) ) / (2 * a)
+            t2 = ( -b - sqrt(temp) ) / (2 * a)
+
+            t3 = t1 if t1 >= 0 else inf
+            t4 = t2 if t2 >= 0 else inf
+        
+            t = min(t3, t4)
+
+        return t

@@ -1,6 +1,6 @@
 import numpy as np
 from math import sin, cos, atan2, pi, sqrt
-from line_sight_partial_3D import line_sight_partial_3D
+from env.line_sight_partial_3D import line_sight_partial_3D
 from collections import namedtuple
 # state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
 # moving_state_list: [[x, y, z, vx, vy, vz, radius, prb]]其他无人机
@@ -10,7 +10,7 @@ import numpy as np
   
 class Drone():  
     def __init__(self, id, starting, destination, waypoints, n_points, init_acc,priority, dt=1,    
-                 vel=np.zeros((3,)), vel_max=2*np.ones((3,)), goal_threshold=0.1, radius=1, **kwargs):  
+                 vel=np.zeros((3,)), vel_max=2*np.ones((3,)), goal_threshold=3, radius=1, **kwargs):  
   
         self.id = int(id)  # 无人机编号  
   
@@ -32,8 +32,10 @@ class Drone():
         # 当前目标点，初始化为destination或者waypoints的第二个点 （waypoints）
         if len(waypoints) > 0:  
             self.current_des = np.array(waypoints[1])
+            self.previous_des = np.array(waypoints[0])
         else:  
-            self.current_des = destination
+            self.current_des = np.array(destination)if isinstance(destination, list) else destination
+            self.previous_des = np.array(waypoints[0])
 
         self.i = 1  
         self.previous_state = self.state.copy()  
@@ -43,7 +45,8 @@ class Drone():
   
         self.arrive_flag = False  # 到达标志 
         self.destination_arrive_flag = False# 
-        self.collision_flag = False  # 碰撞标志  
+        self.collision_flag = False  # 碰撞标志
+        self.see_des_flag = True  
         self.goal_threshold = goal_threshold  # 到达目标的阈值 
 
         #self.components = components 
@@ -62,7 +65,7 @@ class Drone():
         self.state = state
         self.vel = vel
 
-    def move_forward(self, vel, stop=True, **kwargs): 
+    def move_forward(self, vel, E3d, map_size, stop=True, **kwargs): 
     
         if isinstance(vel, list):
             vel = np.array(vel)
@@ -80,17 +83,23 @@ class Drone():
         self.previous_state = self.state
         self.move(vel, self.__noise, self.__control_std)
         self.arrive(self.state, self.current_des)
+        self.change_current_des(self, E3d, map_size)
         return self.arrive_flag
 
 
     def current_des_new(self, E3d, map_size):  
-        if self.arrive(self.state, self.current_des):  
-            if self.i < self.n_points - 1:  # 减1是因为当前已经到达了第i个点  
-                next_waypoint = self.waypoints[self.i + 1]  
-                if line_sight_partial_3D(E3d, (self.state[0], next_waypoint[0]),  (self.state[1], next_waypoint[1]),  (self.state[2], next_waypoint[2]),  map_size) == 1:  
-                    self.i += 1  
-                    self.current_des = np.array(next_waypoint)  
+        if self.i < self.n_points - 1:  # 减1是因为当前已经到达了第i个点  
+            next_waypoint = self.waypoints[self.i + 1]  
+            if line_sight_partial_3D(E3d, (self.state[0], next_waypoint[0]),  (self.state[1], next_waypoint[1]),  (self.state[2], next_waypoint[2]),  map_size) == 1:  
+                self.i += 1
+                self.previous_des = self.current_des
+                self.current_des = np.array(next_waypoint)  
              
+
+    def if_see_des(self,E3d, map_size):
+        if line_sight_partial_3D(E3d, (self.state[0], self.current_des[0]),  (self.state[1], self.current_des[1]),  (self.state[2], self.current_des[2]),  map_size) == 0:
+            self.see_des_flag = False  
+
 
     def change_current_des(self, E3d, map_size):###加到move_forward
         if self.arrive(self.state, self.current_des):
@@ -229,7 +238,7 @@ class Drone():
                     return True    
    
 
-    def state(self):
+    def dronestate(self):
         v_des = self.cal_des_vel()
         rc_array = np.array([self.radius_collision])
         priority = np.array(self.priority)
@@ -242,13 +251,21 @@ class Drone():
         return np.concatenate((self.state[0:3], self.vel, rc_array), axis = 0) 
 
 
-    def reset(self, random_bear=False):
+    def reset(self):
 
-        self.state[:] = self.starting
-        self.previous_state[:] = self.starting
+        self.state = self.starting
+        self.previous_state = self.starting
         self.vel = np.zeros((3,))
         self.arrive_flag = False
         self.collision_flag = False
+        self.see_des_flag = True
+
+    def Deviation_from_route(self):
+
+        deviation = self.calculate_deviation(self.previous_des, self.current_des, self.state)
+##添加航线不可见
+        return deviation 
+
 
 
     # 检查两个无人机是否碰撞  
@@ -317,6 +334,47 @@ class Drone():
         
         return radian
     
+    @staticmethod
+    def calculate_deviation(start, end, drone_position):  
+        # 起点、终点和无人机当前位置  
+        x1, y1, z1 = start  
+        x2, y2, z2 = end  
+        x0, y0, z0 = drone_position  
+  
+        # 计算方向向量  
+        dx = x2 - x1  
+        dy = y2 - y1  
+        dz = z2 - z1  
+  
+        # 计算方向向量的模（长度）  
+        d_magnitude = sqrt(dx**2 + dy**2 + dz**2)  
+  
+        # 防止除数为0（当起点和终点相同时）  
+        if d_magnitude == 0:  
+            return 0  # 起点和终点相同，无人机不可能偏离航线  
+  
+        # 归一化方向向量  
+        dx_hat = dx / d_magnitude  
+        dy_hat = dy / d_magnitude  
+        dz_hat = dz / d_magnitude  
+  
+        # 计算无人机位置到起点的向量  
+        px = x0 - x1  
+        py = y0 - y1  
+        pz = z0 - z1  
+  
+        # 计算投影长度  
+        t = px * dx_hat + py * dy_hat + pz * dz_hat  
+  
+        # 使用投影长度找到航线上离无人机最近的点  
+        qx = x1 + t * dx_hat  
+        qy = y1 + t * dy_hat  
+        qz = z1 + t * dz_hat  
+  
+        # 计算无人机位置到最近点的距离（偏离程度）  
+        deviation = sqrt((x0 - qx)**2 + (y0 - qy)**2 + (z0 - qz)**2) 
+  
+        return deviation 
 
 
     """ def cal_des_vel_omni(self):  

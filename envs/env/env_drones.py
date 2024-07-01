@@ -121,8 +121,8 @@ class env_Drone:##需要输入：无人机数量、航路点、航路点数量�
         self.Drone_list[id].reset()
 
     def total_states(self):
-        Drone_state_list = list(map(lambda r: np.squeeze( r.state()), self.Drone_list))
-        return Drone_state_list
+        drone_state_list = list(map(lambda r: np.squeeze( r.dronestate()), self.Drone_list))# state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
+        return drone_state_list
     
 
     @staticmethod  

@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from pynput import keyboard
 import xlrd
-from env_drones import env_Drone
-from Drone import Drone
+from envs.env.env_drones import env_Drone
+from envs.env.Drone import Drone
 from world.path_planning_main import path_planning_main as pathplan##这里还要改
 from world.grid_3D_safe_zone import grid_3D_safe_zone
 
