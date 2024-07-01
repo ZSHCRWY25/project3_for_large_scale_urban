@@ -6,7 +6,7 @@ import numpy as np
 
 class ir_gym(env_base):
     def __init__(self, world_name, neighbors_region=5, neighbors_num=10, vxmax = 2, vymax = 2, vzmax = 2, env_train=True, acceler = 0.5, **kwargs):
-        super(ir_gym, self).__init__(world_name=world_name, **kwargs)#（没改完）
+        super(ir_gym, self).__init__(world_name=world_name, **kwargs)#（改完）
 
         # self.obs_mode = kwargs.get('obs_mode', 0)    # 0 drl_rvo, 1 drl_nrvo
         # self.reward_mode = kwargs.get('reward_mode', 0)
@@ -25,7 +25,7 @@ class ir_gym(env_base):
         self.acceler = acceler
         self.arrive_flag_cur = False#到达标志
 
-        self.rvo_state_dim = 9#RVO（Reciprocal Velocity Obstacles）状态维度   这个要不要改啊....
+        self.rvo_state_dim = 9#RVO（Reciprocal Velocity Obstacles）状态维度
         
 
     def cal_des_list(self):#计算所有无人机的目标速度列表。(改完)
@@ -85,14 +85,14 @@ class ir_gym(env_base):
         done_list = [l[2] for l in obs_reward_list]
         info_list = [l[3] for l in obs_reward_list]
         finish_list = [l[4] for l in obs_reward_list]
-        #对于每个机器人，调用 observation_reward 方法计算观测和奖励。
+        #对于每个机无人机，调用 observation_reward 方法计算观测和奖励。
 #       返回观测列表、奖励列表、完成标志列表和其他信息列表。
 
         return observation_list, reward_list, done_list, info_list, finish_list 
 
-    def observation_reward(self, drone, odro_state_list,action, **kwargs):#算机器人的观测和奖励。
+    def observation_reward(self, drone, odro_state_list,action, **kwargs):#算无人机的观测和奖励。
 
-       # 计算机器人的内部观测和外部观测。
+       # 计算无人机的内部观测和外部观测。
        # 返回观测、奖励、完成标志和其他信息。
         drone_state = drone.dronestate()
         des_vel = np.squeeze(drone.cal_des_vel())
@@ -127,13 +127,13 @@ class ir_gym(env_base):
             exter_obs_vo = np.concatenate(obs_vo_list) # vo list外部观测
 
         if len(obs_building_list) == 0:
-            exter_obs_building = np.zeros((self.rvo_state_dim,))##也是十个
+            exter_obs_building = np.zeros((self.rvo_state_dim,))
         else:
             exter_obs_building = np.concatenate(obs_building_list) # vo list外部观测
             
         observation = np.round(np.concatenate([propri_obs, exter_obs_vo, exter_obs_building]), 2)##链接
 
-        # dis2goal = sqrt( robot.state[0:2] - robot.goal[0:2])##g改到这
+        # dis2goal = sqrt( robot.state[0:2] - robot.goal[0:2
         mov_reward = self.mov_reward(collision_flag, arrive_reward_flag, destination_arrive_reward_flag, self.reward_parameter, min_exp_time)
 
         reward = mov_reward
@@ -159,7 +159,7 @@ class ir_gym(env_base):
 
         return mov_reward
 
-    def osc_reward(self, state_list):#避免机器人的振荡（oscillation）检查机器人状态列表中的角度变化，如果出现振荡则返回负奖励
+    def osc_reward(self, state_list):#避免轨迹振荡（oscillation）检查状态列表中的角度变化，如果出现振荡则返回负奖励
         # to avoid oscillation
         dif_rad_list = []
         
@@ -180,8 +180,8 @@ class ir_gym(env_base):
                 return -10  
         return 0
 
-    def observation(self, drone, other_drone_state_list):#计算机器人的观测
-        drone_state = drone.dronestate() #提取机器人的当前位置、速度、大小、优先级、期望速度
+    def observation(self, drone, other_drone_state_list):#计算观测
+        drone_state = drone.dronestate() #提取当前位置、速度、大小、优先级、期望速度
         des_vel = np.squeeze(drone_state[-3:])# state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
         
         obs_vo_list, _, min_exp_time, _ , obs_building_list= self.rvo.config_vo_inf(drone_state, other_drone_state_list, env_base.building_list)#如果存在速度障碍物（VO），还计算外部观测
@@ -194,7 +194,7 @@ class ir_gym(env_base):
             exter_obs = np.concatenate(obs_vo_list) # vo list外部观测变量
 
         if len(obs_building_list) == 0:
-            exter_obs_building = np.zeros((self.rvo_state_dim,))##也是十个
+            exter_obs_building = np.zeros((self.rvo_state_dim,))
         else:
             exter_obs_building = np.concatenate(obs_building_list) # vo list外部观测
 
@@ -205,19 +205,19 @@ class ir_gym(env_base):
 
         return observation
 
-    def env_reset(self):#重置环境，包括机器人
+    def env_reset(self):#重置环境
 
         self.components['drones'].drones_reset()
         drone_state_list = self.components['drones'].total_states()# state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
         obs_list = list(map(lambda drone: self.observation(drone, drone_state_list ), self.drone_list))
-    #调用 robots_reset 方法以重置机器人状态。
-    #根据更新后的状态计算所有机器人的观测
+    #调用reset 方法以重置无人机状态。
+    #根据更新后的状态计算所有无人机的观测
         return obs_list
 
-    def env_reset_one(self, id):#重置环境中的特定机器人，在多智能体场景中逐个重置机器人
+    def env_reset_one(self, id):#重置环境中的特定无人机，在多智能体场景中逐个重置无人机
         self.drone_reset(id)
 
-    def env_observation(self):#计算环境中所有机器人的观测，类似于 env_reset，但不重置环境或机器人状态
+    def env_observation(self):#计算环境中所有无人机的观测，类似于 env_reset，但不重置环境或无人机状态
         drone_list = self.components['drone'].Drone_list()
         drone_state_list = self.components['drone'].total_states() 
         observation_list = []
@@ -232,8 +232,8 @@ class ir_gym(env_base):
     def render(self, time=0.05, **kwargs):
 
         if self.plot:
-            self.world_plot.com_cla()
-            self.world_plot.draw_dyna_components(**kwargs)
+            self.world_plot.clear_plot_elements()
+            self.world_plot.draw_drones(**kwargs)
             self.world_plot.pause(time)
             
         self.time = self.time + time

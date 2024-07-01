@@ -22,7 +22,6 @@ class env_plot:
 
         self.fig = plt.figure()  
         self.ax = self.fig.add_subplot(111, projection='3d')  
-        self.drone_plot_list = []
         
         self.width = width
         self.lenth = lenth
@@ -41,7 +40,9 @@ class env_plot:
         self.building_list = building_list
         self.map_size = map_size
         self.drone_plot_list = []
+        self.text_list = [] 
         self.vel_line_list = []
+        self.trajectory_line_list = []
 
 
         self.init_plot(**kwargs)
@@ -127,43 +128,43 @@ class env_plot:
     def draw_drone(self, drone, drone_color = 'g', destination_color='r', show_vel=True, show_goal=True, show_text=True, show_traj=False, traj_color='-g', **kwargs):
         
         x, y, z = drone.state[:3]  
-        goal_x, goal_y, goal_z = drone.destination  
-  
         # 绘制无人机位置（使用散点图或其他方法）  
-        self.ax.scatter(x, y, z, c=drone_color, marker='^', label=f'Drone {drone.id}')  
+        a = self.ax.scatter(x, y, z, c=drone_color, marker='^', label=f'Drone {drone.id}')
+        self.drone_plot_list.append(a)
   
-        # 绘制目标位置（使用散点图模拟球体）  
-        self.ax.scatter(goal_x, goal_y, goal_z, c=destination_color, s=100, alpha=0.5)  # 增大s参数以模拟球体  
-    
-        
-        if show_goal:  
-            if show_text:  
-                self.ax.text(goal_x + 0.3, goal_y, goal_z, 'G' + str(drone.id), fontsize=12, color='k',zorder=5)  
-            # 这里不将球体添加到drone_plot_list，因为它们是使用scatter绘制的点
-
 
         if show_text:  
-            self.ax.text(x - 0.5, y, z, 'D' + str(drone.id), fontsize=10, color='k',  zorder=5)  # 同样确保文本可见  )  
+            b = self.ax.text(x - 0.5, y, z, 'D' + str(drone.id), fontsize=10, color='k',  zorder=5)  # 同样确保文本可见  )
+            self.text_list.append(b)  
   
         if show_traj:  
             x_list = [drone.previous_state[0], drone.state[0]]  
             y_list = [drone.previous_state[1], drone.state[1]]  
             z_list = [drone.previous_state[2], drone.state[2]]  
-            self.ax.plot(x_list, y_list, z_list, color = traj_color)  
+            c = self.ax.plot(x_list, y_list, z_list, color = traj_color)[0]
+            self.trajectory_line_list.append(c) 
   
         if show_vel:  
-            vel_x, vel_y, vel_z = drone.state[3:]  
-            # 使用FancyArrow3D绘制3D箭头  
-            a = self.draw_vector(self, x, y, z, vel_x, vel_y, vel_z, color='r') 
-            self.ax.add_artist(a)  
-            self.drone_plot_list.append(a)
+            vel_x, vel_y, vel_z = drone.state[3:]   
+            d = self.draw_vector( x, y, z, vel_x, vel_y, vel_z, color='r') 
+            self.vel_line_list.append(d)
+          
+
 
 
     def draw_vector(self, x, y, z, vel_x, vel_y, vel_z, color='r'):  
-        vel_tt = vel_x + vel_y + vel_z
-        dx,dy,dz =x + round(vel_x/vel_tt,1), y + round(vel_y/vel_tt,1), z + round(vel_z/vel_tt,1)
+         # 计算速度向量的模（长度）  
+        vel_norm = np.linalg.norm([vel_x, vel_y, vel_z])  
+      
+        # 如果速度为0，则不绘制箭头  
+        if vel_norm == 0:  
+            return None  
+      
+        scale_factor = 0.2  
+        dx, dy, dz = dx * scale_factor, dy * scale_factor, dz * scale_factor
         # 绘制箭头
-        self.ax.quiver(x,y,z,dx,dy,dz)
+        a = self.ax.quiver(x,y,z,dx,dy,dz)
+        return a
 
     def draw_trajectory(self, traj, color='g', label='trajectory', show_direction=False, refresh=False):  ############改到这里
         # traj 应该是一个形状为 (num_points, 3) 的 NumPy 数组  
@@ -188,54 +189,42 @@ class env_plot:
                     dx, dy, dz = dx_list[i], dy_list[i], dz_list[i]  # 提取方向向量的分量  
                     self.draw_vector(x, y, z, dx, dy, dz, color='b')  # 使用蓝色箭头表示方向  
   #####################
-        plt.show()
 
 
 
 
         
     def clear_plot_elements(self):  
-        # 清理文本  
-        for text in self.ax.texts:  
-            text.remove()  
-  
-        # 清理机器人图形  
-        for robot_plot in self.robot_plot_list:  
-            robot_plot.remove()  
-  
-        # 清理汽车图形  
-        for car_plot in self.car_plot_list:  
-            car_plot.remove()  
-  
-        # 清理线条（假设line_list是一个包含Line2D对象的列表）  
-        for line in self.line_list:  
-            line.remove()  
-  
-        # 清理激光雷达线条（类似地处理）  
-        for lidar_line in self.lidar_line_list:  
-            lidar_line.remove()  
-  
-     # 清理汽车图像  
-        for car_img in self.car_img_show_list:  
-            car_img.remove()  
-  
-        # 清理动态障碍物图形  
-        for obs in self.dyna_obs_plot_list:  
-            obs.remove()  
-  
-        # 清空列表，以便下次使用  
-        self.car_plot_list.clear()  
-        self.robot_plot_list.clear()  
-        self.lidar_line_list.clear()  
-        self.car_img_show_list.clear()  
-        self.line_list.clear()  
-        self.dyna_obs_plot_list.clear()
-        # animation method 1
+        # 遍历无人机列表，并从图上删除它们  
+        for scatter in self.drone_plot_list:  
+            scatter.remove()  
+        self.drone_plot_list.clear() 
+        for text in self.text_list:
+            text.remove()
 
+        self.text_list.clear() 
+  
+          # 清除速度向量  
+        for line in self.vel_line_list:  
+            line.remove()  # 注意这里假设vel_line_list包含的是Quiver或Line2D对象  
+        self.vel_line_list.clear()  
+  
+        # 清除轨迹线  
+        for line in self.trajectory_line_list:  
+            # 如果trajectory_line_list包含的是Line2D对象的列表，你需要遍历每个列表  
+            if isinstance(line, list):  
+                for segment in line:  
+                    segment.remove()  
+            else:  
+                line.remove()  
+        self.trajectory_line_list.clear()  
+  
+        # 如果需要的话，强制重新绘制图形  
+        #self.ax.figure.canvas.draw_idle()
 
     def animate(self):
 
-        self.draw_robot_diff_list()
+        self.draw_drones()
 
         return self.ax.patches + self.ax.texts + self.ax.artists
 

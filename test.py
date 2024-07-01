@@ -1,30 +1,46 @@
 
-
-
-
-
 import matplotlib.pyplot as plt  
 from matplotlib.animation import FuncAnimation  
 from mpl_toolkits.mplot3d import Axes3D  
 from matplotlib.patches import FancyArrow  
 import numpy as np  
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-fig = plt.figure()
-ax = fig.add_subplot(111,projection='3d')
-x,y,z = 5,5,5
-dx,dy,dz =2,1,3 
-# 绘制箭头
-ax.quiver(x,y,z,dx,dy,dz)
-# 设置华标釉范围
-ax.set_xlim([0,10])
-ax.set_ylim([0,10])
-ax.set_zlim([0,10])
-# 没置些标釉标备
-ax.set_xlabel('X')
-ax.set_ylabel('y')
-ax.set_zlabel('z')
+
+fig = plt.figure()  
+ax = fig.add_subplot(111, projection='3d')  
+
+previous_state = [0,0,0]
+state = [5,5,5]
+trajectory_line_list = []
+
+x_list = [previous_state[0], state[0]]  
+y_list = [previous_state[1], state[1]]  
+z_list = [previous_state[2], state[2]]  
+c = ax.plot(x_list, y_list, z_list, color = 'r')[0]
+trajectory_line_list.append(c)
+
+for line in trajectory_line_list:  
+    line.remove()  # 直接从列表中获取Line3D对象并删除  
+trajectory_line_list.clear()
 plt.show()
+
+
+
+#以下是成功箭头
+# fig = plt.figure()
+# ax = fig.add_subplot(111,projection='3d')
+# x,y,z = 5,5,5
+# dx,dy,dz =2,1,3 
+# # 绘制箭头
+# ax.quiver(x,y,z,dx,dy,dz)
+# # 设置华标釉范围
+# ax.set_xlim([0,10])
+# ax.set_ylim([0,10])
+# ax.set_zlim([0,10])
+# # 没置些标釉标备
+# ax.set_xlabel('X')
+# ax.set_ylabel('y')
+# ax.set_zlabel('z')
+# plt.show()
 
 #以下是一段成功的轨迹
 # class FancyArrow3D(FancyArrow):  
