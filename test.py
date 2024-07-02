@@ -5,37 +5,37 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import FancyArrow  
 import numpy as np  
 
-# 初始化数据  
-fig = plt.figure()  
-ax = fig.add_subplot(111, projection='3d')  
+# # 初始化数据  
+# fig = plt.figure()  
+# ax = fig.add_subplot(111, projection='3d')  
   
-# 初始位置  
-x, y, z = 0, 0, 0  
-line, = ax.plot([x], [y], [z], 'ro')  # 绘制初始点，'ro'表示红色圆圈  
+# # 初始位置  
+# x, y, z = 0, 0, 0  
+# line, = ax.plot([x], [y], [z], 'ro')  # 绘制初始点，'ro'表示红色圆圈  
   
-# 定义更新函数  
-def update(frame):  
-    # 计算新的位置  
-    t = frame / 10.0  # 时间参数  
-    x = np.sin(t)  
-    y = np.cos(t)  
-    z = t  
+# # 定义更新函数  
+# def update(frame):  
+#     # 计算新的位置  
+#     t = frame / 10.0  # 时间参数  
+#     x = np.sin(t)  
+#     y = np.cos(t)  
+#     z = t  
       
-    # 更新点的位置  
-    line.set_data_3d([x], [y], [z])  
+#     # 更新点的位置  
+#     line.set_data_3d([x], [y], [z])  
       
-    # 设置坐标轴范围  
-    ax.set_xlim(-1.5, 1.5)  
-    ax.set_ylim(-1.5, 1.5)  
-    ax.set_zlim(0, 10)  
+#     # 设置坐标轴范围  
+#     ax.set_xlim(-1.5, 1.5)  
+#     ax.set_ylim(-1.5, 1.5)  
+#     ax.set_zlim(0, 10)  
       
-    return line,  
+#     return line,  
   
-# 创建动画  
-ani = FuncAnimation(fig, update, frames=np.arange(0, 100), interval=100, blit=False)  
+# # 创建动画  
+# ani = FuncAnimation(fig, update, frames=np.arange(0, 100), interval=100, blit=False)  
   
-# 显示图形  
-plt.show()
+# # 显示图形  
+# plt.show()
 
 # fig = plt.figure()  
 # ax = fig.add_subplot(111, projection='3d')  

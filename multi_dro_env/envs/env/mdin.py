@@ -1,7 +1,14 @@
+'''
+:@Author: 刘玉璞
+:@Date: 2024/6/24 16:44:00
+:@LastEditors: 刘玉璞
+:@LastEditTime: 2024/7/2 16:44:00
+:Description: 
+'''
 import gym
-from envs.env.ir_gym import ir_gym
+from ir_gym import ir_gym
 
-class mrnav(gym.Env):
+class mdin(gym.Env):
     def __init__(self, world_name=None, neighbors_region=5, neighbors_num=10, **kwargs):
         
         self.ir_gym = ir_gym(world_name, neighbors_region, neighbors_num, **kwargs)

@@ -1,3 +1,10 @@
+'''
+:@Author: 刘玉璞
+:@Date: 2024/6/30 16:43:54
+:@LastEditors: 刘玉璞
+:@LastEditTime: 2024/7/2 16:43:54
+:Description: 
+'''
 import numpy as np
 import matplotlib as mpl
 import matplotlib.animation as animation

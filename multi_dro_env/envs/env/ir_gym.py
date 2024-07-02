@@ -1,7 +1,14 @@
-from envs.env.env_base import env_base
+'''
+:@Author: 刘玉璞
+:@Date: 2024/6/24 16:43:57
+:@LastEditors: 刘玉璞
+:@LastEditTime: 2024/7/2 16:43:57
+:Description: 
+'''
+from env_base import env_base
 from math import sqrt, pi, acos, degrees
 from gym import spaces
-from rvo_inter import rvo_inter
+from vel_obs.rvo_inter import rvo_inter
 import numpy as np
 
 class ir_gym(env_base):

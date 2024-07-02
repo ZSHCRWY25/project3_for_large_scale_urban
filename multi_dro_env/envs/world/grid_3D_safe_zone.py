@@ -2,7 +2,7 @@
 :@Author: 刘玉璞
 :@Date: 2024/4/13 20:48:51
 :@LastEditors: 刘玉璞
-:@LastEditTime: 2024/4/13 20:48:51
+:@LastEditTime: 2024/7/2 16:44:46
 :Description: 
 '''
 #生成位置、高度、半径随机的圆柱、
@@ -30,7 +30,7 @@ def grid_3D_safe_zone(sizeE, d_grid,h, path_num, f1origin, f2origin, n_low):
     # 初始化障碍物参数
     mean_E = 0
     sigma = 1
-    k_sigma = 3   # 障碍物密度
+    k_sigma = 2.7   # 障碍物密度
     rng = default_rng()
     E = rng.normal(mean_E, sigma, (y_size, x_size))
     sigma_obstacle = k_sigma * sigma

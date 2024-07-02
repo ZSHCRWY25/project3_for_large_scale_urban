@@ -1,17 +1,24 @@
+'''
+:@Author: 刘玉璞
+:@Date: 2024/6/10 16:43:44
+:@LastEditors: 刘玉璞
+:@LastEditTime: 2024/7/2 16:43:44
+:Description: 
+'''
 import yaml
 import numpy as np
 import sys
 import math
 import env_plot
 import xlrd
-from envs.env.env_drones import env_Drone
-from envs.env.Drone import Drone
+from env_drones import env_Drone
+from env.Drone import Drone
 from world.path_planning_main import path_planning_main as pathplan##这里还要改
 from world.grid_3D_safe_zone import grid_3D_safe_zone
 
 class env_base:
 
-    def __init__(self, map_height = 50, map_width = 50, map_high =30 , dron_num = 6, **kwargs):
+    def __init__(self, map_height = 50, map_width = 50, map_high =10 , dron_num = 6, **kwargs):
         self.map_height = map_height
         self.map_width = map_width
         self.map_high = map_high
@@ -36,7 +43,7 @@ class env_base:
 
 
     def init_map_road(self):
-        E, E_safe, E3d, E3d_safe ,obs_list = grid_3D_safe_zone(self.map_size, 1, 25, self.dron_num, self.starting, self.destination, 2)
+        E, E_safe, E3d, E3d_safe ,obs_list = grid_3D_safe_zone(self.map_size, 1, 25, self.dron_num, self.starting, self.destination, 1)
     #E是二维障碍物地图
     #E_safe带保护区用来画图
     #E3d三维障碍物，用于学习环境

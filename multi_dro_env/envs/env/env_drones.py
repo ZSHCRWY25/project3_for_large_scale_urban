@@ -1,9 +1,15 @@
+'''
+:@Author: 刘玉璞
+:@Date: 2024/6/8 16:43:48
+:@LastEditors: 刘玉璞
+:@LastEditTime: 2024/7/2 16:43:48
+:Description: 
+'''
 from Drone import Drone
 from math import pi, cos, sin ,atan2, pi, sqrt
 import numpy as np
 import random  
 from collections import namedtuple
-from ir_sim.util import collision_cir_cir, collision_cir_matrix, collision_cir_seg
 # state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
 # moving_state_list: [[x, y, z, vx, vy, vz, radius, prb]]其他无人机
 # obstacle_state_list: [[x, y, z, radius]]建筑物障碍物

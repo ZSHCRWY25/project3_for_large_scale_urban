@@ -1,6 +1,13 @@
+'''
+:@Author: 刘玉璞
+:@Date: 2024/6/6 16:43:18
+:@LastEditors: 刘玉璞
+:@LastEditTime: 2024/7/2 16:43:18
+:Description: 
+'''
 import numpy as np
 from math import sin, cos, atan2, pi, sqrt
-from env.line_sight_partial_3D import line_sight_partial_3D
+from world.line_sight_partial_3D import line_sight_partial_3D
 from collections import namedtuple
 # state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
 # moving_state_list: [[x, y, z, vx, vy, vz, radius, prb]]其他无人机
