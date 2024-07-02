@@ -1,6 +1,7 @@
 import gym
 import gym_env
 from pathlib import Path
+from envs import env_init
 
 world_name = 'gym_test_world.yaml'
 # world_name = 'dynamic_obs_test.yaml'
