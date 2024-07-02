@@ -30,7 +30,7 @@ def grid_3D_safe_zone(sizeE, d_grid,h, path_num, f1origin, f2origin, n_low):
     # 初始化障碍物参数
     mean_E = 0
     sigma = 1
-    k_sigma = 2.7   # 障碍物密度
+    k_sigma = 3   # 障碍物密度
     rng = default_rng()
     E = rng.normal(mean_E, sigma, (y_size, x_size))
     sigma_obstacle = k_sigma * sigma
@@ -39,7 +39,7 @@ def grid_3D_safe_zone(sizeE, d_grid,h, path_num, f1origin, f2origin, n_low):
 
 
     #最小高度
-    hh_min = 3
+    hh_min = 4
 
     # 先复制一个二维地图，一会要用
     EE = E.copy()
@@ -52,7 +52,7 @@ def grid_3D_safe_zone(sizeE, d_grid,h, path_num, f1origin, f2origin, n_low):
             # 检查栅格值
             if EE[j, i] > 0:
                 # 指定障碍物高度
-                hh = round(rng.normal(0.75*h, 0.5*h))
+                hh = round(rng.normal(0.8*h, 0.5*h))
                 # 限定高度
                 if hh < hh_min:
                     hh = hh_min
@@ -90,7 +90,7 @@ def grid_3D_safe_zone(sizeE, d_grid,h, path_num, f1origin, f2origin, n_low):
         for j in range(y_size):
             if EE[j,i]>0:
                 obs_num += 1
-                obs_radius = np.random.randint(1,4)#半径1-3
+                obs_radius = np.random.randint(2,5)#半径2-4
                 obs_list.append([j, i,E[j,i] ,obs_radius])
                 for k in range(i - obs_radius, i + obs_radius + 1):
                     if k < 1 or k >= x_size:

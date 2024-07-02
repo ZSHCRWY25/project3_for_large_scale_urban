@@ -11,7 +11,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import theta_star_3D
+from envs.world.theta_star_3D import theta_star_3D
 import math
 def path_planning_main(sizeE,P0, Pend, E3d_safe):
     ##############################################################################################################
@@ -61,8 +61,8 @@ def path_planning_main(sizeE,P0, Pend, E3d_safe):
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    #ax.plot_surface(X, Y, E_safe[1:-1][:, 1:-1])
-    #ax.plot(path[:][:, 1], path[:][:, 0], path[:][:, 2], 'kx-')
+    #ax.plot_surface(X, Y, E3d_safe[1:-1][:, 1:-1])
+    ax.plot(path[:][:, 1], path[:][:, 0], path[:][:, 2], 'kx-')
     ax.plot([x0], [y0], [z0], 'go')
     ax.plot([xend], [yend], [zend], 'ro')
     ax.set_xlabel('x')

@@ -5,6 +5,46 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import FancyArrow  
 import numpy as np  
 
+def plot_buildings_on_map(map_size, buildings):  
+        # 地图大小可能包含x、y和z轴的范围，但在这里我们只关心x和y的范围  
+        x_range, y_range, z_range = map_size
+        
+        fig = plt.figure(figsize=(8, 6))  
+        ax = fig.add_subplot(111, projection='3d')  
+      
+        # 设置地图的x和y轴范围  
+        ax.set_xlim(0, x_range)  
+        ax.set_ylim(0, y_range)  
+        ax.set_zlim(0, z_range + 5)  # z轴范围基于建筑物最高度+一点额外空间  
+      
+        # 绘制每个建筑物（圆柱体）  
+        for b in buildings:  
+            x, y, h, r = b  
+          
+            # 生成极坐标和高度  
+            u = np.linspace(0, 2 * np.pi, 50)  
+            h_vals = np.linspace(0, h, 20)  # 足够的高度切片以形成平滑的圆柱体  
+          
+         # 使用meshgrid生成二维网格上的X, Y, Z  
+            U, H = np.meshgrid(u, h_vals)  
+            X = x + r * np.sin(U)  # 考虑建筑物的x坐标  
+            Y = y + r * np.cos(U)  # 考虑建筑物的y坐标  
+            Z = H  
+          
+            # 绘制曲面，并设置颜色为蓝色  
+            ax.plot_surface(X, Y, Z, linewidth=0, facecolor='b', shade=True, alpha=0.6)
+            plt.gca().set_prop_cycle(None)
+
+
+building_list = [[20, 9, 4, 4], [45, 13, 4, 4], [8, 20, 6, 2], [5, 22, 4, 2], [11, 26, 10, 4], [25, 33, 5, 2], [35, 39, 6, 2], [0, 45, 10, 3]]
+map_size = [50, 50, 10]
+plot_buildings_on_map(map_size, building_list)
+plt.show()
+
+
+
+
+
 # # 初始化数据  
 # fig = plt.figure()  
 # ax = fig.add_subplot(111, projection='3d')  

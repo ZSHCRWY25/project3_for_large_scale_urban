@@ -24,8 +24,8 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from PIL import Image
 
 class env_plot:
-    def __init__(self, map_size, building_list, lenth= 10, width=10, height=10, components=dict(),  
-                 full=False, keep_path=False, map_matrix=None, offset_x = 0, offset_y=0, **kwargs):
+    def __init__(self, map_size, building_list, components, lenth= 10, width=10, height=10,
+                 full=False, keep_path=False, map_matrix=None, offset_x = 0, offset_y=0):
 
         self.fig = plt.figure()  
         self.ax = self.fig.add_subplot(111, projection='3d')  
@@ -52,7 +52,7 @@ class env_plot:
         self.trajectory_line_list = []
 
 
-        self.init_plot(**kwargs)
+        self.init_plot()
 
         if full:#full为True，则尝试将图形窗口设置为全屏模式（根据操作系统）。
             mode = platform.system()
@@ -62,8 +62,8 @@ class env_plot:
                 figManager = plt.get_current_fig_manager()
                 figManager.window.showMaximized()
 
-    def init_plot(self, **kwargs):##没改
-        self.ax.set_aspect('equal')#确保x和y轴的比例相
+    def init_plot(self):##没改
+        self.ax.set_aspect('auto')#确保x和y轴的比例相
         self.ax.set_xlim(self.offset_x, self.offset_x + self.width)#设置x和y轴的限制，使用offset_x和offset_y进行偏移
         self.ax.set_ylim(self.offset_y, self.offset_y + self.height)
         self.ax.set_xlabel("x [m]")#设置轴的标签
@@ -75,27 +75,27 @@ class env_plot:
         self.drone_img = Image.open(drone_image_path)  
         self.drone_img_box = OffsetImage(self.drone_img, zoom=0.05)
 
-        self.plot_buildings_on_map(self.map_size, self.building_list)#绘制环境的静态组件
-        drones = self.components.get('robots', None)
-        for drone in drones.Drone_list_list:
+        self.plot_buildings_on_map(self.map_size,self.building_list)#绘制环境的静态组件
+        drones = self.components['drones'].Drone_list
+        for drone in drones:
             self.draw_waypoints(drone)    
         return self.ax.patches + self.ax.texts + self.ax.artists
 
 
-    def plot_buildings_on_map(map_size, buildings):  
+    def plot_buildings_on_map(self, map_size, building_list):  
         # 地图大小可能包含x、y和z轴的范围，但在这里我们只关心x和y的范围  
-        x_range, y_range = map_size  
+        x_range, y_range, z_range = map_size
         
         fig = plt.figure(figsize=(8, 6))  
         ax = fig.add_subplot(111, projection='3d')  
       
         # 设置地图的x和y轴范围  
-        ax.set_xlim(-x_range/2, x_range/2)  
-        ax.set_ylim(-y_range/2, y_range/2)  
-        ax.set_zlim(0, max(b[2] for b in buildings) + 5)  # z轴范围基于建筑物最高度+一点额外空间  
+        ax.set_xlim(0, x_range)  
+        ax.set_ylim(0, y_range)  
+        ax.set_zlim(0, z_range + 5)  # z轴范围基于建筑物最高度+一点额外空间  
       
         # 绘制每个建筑物（圆柱体）  
-        for b in buildings:  
+        for b in building_list:  
             x, y, h, r = b  
           
             # 生成极坐标和高度  
@@ -112,17 +112,20 @@ class env_plot:
             ax.plot_surface(X, Y, Z, linewidth=0, facecolor='b', shade=True, alpha=0.6)
             plt.gca().set_prop_cycle(None)   
       
-    def draw_waypoints(drone):
-        middle_waypoints = drone.waypoints[1:-1]  
+    def draw_waypoints(self, drone):
+        if len(drone.waypoints)>2:
+            middle_waypoints = drone.waypoints[1:-1]  
  
-        x = [wp[0] for wp in middle_waypoints]  
-        y = [wp[1] for wp in middle_waypoints]  
-        z = [wp[2] for wp in middle_waypoints] 
-        ax = plt.figure().add_subplot(111,projection='3d')
+            x = [wp[0] for wp in middle_waypoints]  
+            y = [wp[1] for wp in middle_waypoints]  
+            z = [wp[2] for wp in middle_waypoints] 
+            ax = plt.figure().add_subplot(111,projection='3d')
 
-        ax.scatter(x, y, z,c='r',marker='o')
-        for i in range(len(x)):
-            ax.text(x[i],y[i],z[i],str(i), zdir='y')
+            ax.scatter(x, y, z,c='r',marker='o')
+            for i in range(len(x)):
+                ax.text(x[i],y[i],z[i],str(i), zdir='y')
+        else:
+            return 0
 
 
     def draw_drones(self):#改完

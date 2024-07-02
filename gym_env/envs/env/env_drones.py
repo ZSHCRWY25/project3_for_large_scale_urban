@@ -5,7 +5,7 @@
 :@LastEditTime: 2024/7/2 16:43:48
 :Description: 
 '''
-from Drone import Drone
+from envs.env.Drone import Drone
 from math import pi, cos, sin ,atan2, pi, sqrt
 import numpy as np
 import random  
@@ -15,32 +15,24 @@ from collections import namedtuple
 # obstacle_state_list: [[x, y, z, radius]]建筑物障碍物
 # rvo_vel: [x, y, z, ve_x, ve_y, ve_z, α]速度障碍物存储形式
 class env_Drone:##需要输入：无人机数量、航路点、航路点数量、优先级列表
-    def __init__(self, Drone_class=Drone, Drone_number = 0, step_time=1, components=[], building_list = [], **kwargs):
+    def __init__(self, waypoints_list, n_points_list, priority_list,  building_list, Drone_class=Drone, Drone_number = 0, step_time=1, **kwargs):
 
         self.Drone_class = Drone_class#分类
         self.Drone_number = Drone_number#数量
         self.Drone_list = []
-        self.com = components#存储组件列表
 
         self.interval = kwargs.get('interval', 1)#存储时间间隔，默认为 1
         self.radius = kwargs.get('radius', False)#是否随机半径，默认为 False。
 
         self.building_list = building_list
-
-
-        if self.Drone_number > 0:
-            assert 'waypoints_list' in kwargs and 'n_points_list' in kwargs and 'priority_list' in kwargs, "Missing required keyword arguments"
-            waypoints_list = kwargs['waypoints_list']
-            n_pointst_list = kwargs['n_pointst_list']
-            priority_list = kwargs['priority_list']
-            radius_list = kwargs.get('radius_list', 1)##有默认值
-            starting_list, destination_list= self.init_state_distribute(self.init_mode, waypoints_list)
+    
+        starting_list, destination_list= self.init_state_distribute(waypoints_list)
             #使用默认半径列表或从 init_state_distribute 函数中获取初始化状态和目标。
 
         # 创建无人机对象
-        for i in range(self. Drone_number):
+        for i in range(self.Drone_number):
             drone = self.Drone_class(id=i, starting = starting_list[i], destination = destination_list[i], waypoints=waypoints_list[i], 
-                                      n_points = n_pointst_list[i], init_acc = 1,priority = priority_list[i], step_time=step_time, **kwargs)
+                                      n_points = n_points_list[i], init_acc = 1, step_time=step_time, **kwargs)
             self.Drone_list.append(drone)
             self.drone = drone if i == 0 else None 
         

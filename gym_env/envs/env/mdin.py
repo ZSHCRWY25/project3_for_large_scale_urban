@@ -6,7 +6,7 @@
 :Description: 
 '''
 import gym
-from ir_gym import ir_gym
+from envs.env.ir_gym import ir_gym
 
 class mdin(gym.Env):
     def __init__(self, world_name=None, neighbors_region=5, neighbors_num=10, **kwargs):

@@ -7,7 +7,7 @@
 '''
 
 import numpy as np
-import line_sight_partial_3D
+from envs.world.line_sight_partial_3D import line_sight_partial_3D
 
 
 def theta_star_3D(K, E3d_safe, x0_old, y0_old, z0_old, xend_old, yend_old, zend_old, sizeE):

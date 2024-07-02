@@ -7,7 +7,7 @@
 '''
 import numpy as np
 from math import sin, cos, atan2, pi, sqrt
-from world.line_sight_partial_3D import line_sight_partial_3D
+from envs.world.line_sight_partial_3D import line_sight_partial_3D
 from collections import namedtuple
 # state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
 # moving_state_list: [[x, y, z, vx, vy, vz, radius, prb]]其他无人机
@@ -18,7 +18,9 @@ import numpy as np
 class Drone():  
     def __init__(self, id, starting, destination, waypoints, n_points, init_acc,priority = 5, dt=1,    
                  vel=np.zeros((3,)), vel_max=2*np.ones((3,)), goal_threshold=3, radius=1, **kwargs):  
-  
+  #id=i, starting = starting_list[i], destination = destination_list[i], waypoints=waypoints_list[i], 
+   #                                   n_points = n_points_list[i], init_acc = 1, step_time=step_time, **kwargs)
+
         self.id = int(id)  # 无人机编号  
   
         self.vel = np.array(vel) if not isinstance(vel, np.ndarray) else vel  # 速度  
@@ -186,7 +188,7 @@ class Drone():
               
             # 缩放单位方向向量到最大速度  
             vel_scaled = np.multiply(self.vel_max, dir_vector)  
-            vel = np.array(vel_scaled,(3,))  # 确保是(3,)形状的  
+            vel = vel_scaled  # 确保是(3,)形状的  
         else:    
             vel = np.zeros(3,)
         print("des_vel",vel)
@@ -225,7 +227,7 @@ class Drone():
         priority = np.array(self.priority)
         # state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
         #return np.concatenate((self.state, self.vel, rc_array,priority, v_des), axis = 0)
-        return np.concatenate((self.state, self.vel, [rc_array[0]],[priority[0]], v_des), axis = 0)
+        return np.concatenate((self.state, self.vel, [rc_array[0]],[priority[0]], v_des))
 
     def obs_state(self):
         rc_array = self.radius * np.ones((1,))

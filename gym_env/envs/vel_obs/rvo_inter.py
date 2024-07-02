@@ -5,7 +5,7 @@
 :@LastEditTime: 2024/7/2 16:44:32
 :Description: 
 '''
-import envs.vel_obs.reciprocal_vel_obs as reciprocal_vel_obs
+from envs.vel_obs.reciprocal_vel_obs import reciprocal_vel_obs
 from math import sqrt, atan2, asin, sin, pi, cos, inf, acos
 import numpy as np
 from envs.vel_obs.vel_obs3D import get_alpha, get_PAA,  get_rvo_array, get_beta, cal_vo_exp_tim

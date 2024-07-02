@@ -5,10 +5,10 @@
 :@LastEditTime: 2024/7/2 16:43:57
 :Description: 
 '''
-from env_base import env_base
+from envs.env.env_base import env_base
 from math import sqrt, pi, acos, degrees
 from gym import spaces
-from vel_obs.rvo_inter import rvo_inter
+from envs.vel_obs.rvo_inter import rvo_inter
 import numpy as np
 
 class ir_gym(env_base):
@@ -23,7 +23,9 @@ class ir_gym(env_base):
         self.nr = neighbors_region
         self.nm = neighbors_num#邻居区域和邻居数量
 
-        self.rvo = rvo_inter(neighbors_region, neighbors_num, vxmax, vymax,vzmax, acceler, env_train, env_base.building_list)
+        self.rvo = rvo_inter(neighbors_region, neighbors_num, vxmax, vymax,vzmax, acceler, env_train)
+        #def __init__(self, neighbor_region=5, neighbor_num=10, vxmax=1.5, vymax=1.5, vzmax = 1.5, acceler = 0.3, env_train=True, exp_radius=0.2, ctime_threshold=5, delta_t = 1):
+        #super(rvo_inter, self).__init__(neighbor_region, vxmax, vymax, vzmax, acceler)
 
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(5,), dtype=np.float32)#观测空间为5维
         self.action_space = spaces.Box(low=np.array([-1, -1, -1]), high=np.array([1, 1, 1]), dtype=np.float32)#动作空间为3维，范围在[-1, 1]之间

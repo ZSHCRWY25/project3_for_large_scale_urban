@@ -1,12 +1,11 @@
 import gym
-import gym_env
+import envs.env
 from pathlib import Path
-from envs import env_init
 
 world_name = 'gym_test_world.yaml'
 # world_name = 'dynamic_obs_test.yaml'
 
-env = gym.make('mdin-v1', world_name=world_name, drone_number=6)
+env = gym.make('mdin-v1', world_name=world_name, drone_number=4)
 env.reset()
 
 for i in range(300):
