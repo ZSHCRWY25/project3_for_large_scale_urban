@@ -20,13 +20,13 @@ class mrnav(gym.Env):
 
         rvo_reward_list = self.ir_gym.rvo_reward_list_cal(action)
         self.ir_gym.drone_step(action, stop=stop)
-        obs_list, mov_reward, done_list, info_list = self.ir_gym.obs_move_reward_list(action, **kwargs)
+        obs_list, mov_reward, done_list, info_list, finish_list = self.ir_gym.obs_move_reward_list(action, **kwargs)
 
         reward_list = [x+y for x, y in zip(rvo_reward_list, mov_reward)]
         
-        return obs_list, reward_list, done_list, info_list
+        return obs_list, reward_list, done_list, info_list, finish_list
 
-    def render(self, mode = 'human', save=False, path=None, i = 0, **kwargs):##没改
+    def render(self, mode = 'human', save=False, path=None, i = 0, **kwargs):
         self.ir_gym.render(0.01, **kwargs)
 
         if save:
@@ -37,7 +37,7 @@ class mrnav(gym.Env):
         return self.ir_gym.env_reset()
 
     def reset_one(self, id):
-        self.ir_gym.components['robots'].drone_reset(id)
+        self.ir_gym.components['drones'].drone_reset(id)
 
-    def show(self):#没改
+    def show(self):
         self.ir_gym.show()

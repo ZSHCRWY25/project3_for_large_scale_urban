@@ -29,7 +29,7 @@ def mlp3(sizes, activation=nn.ReLU, output_activation=nn.Identity, drop_p = 0.5)
 
 class rnn_ac(nn.Module):
 
-    def __init__(self, observation_space, action_space, state_dim=5, rnn_input_dim=4, 
+    def __init__(self, observation_space, action_space, state_dim, rnn_input_dim=4, 
     rnn_hidden_dim=64, hidden_sizes_ac=(256, 256), hidden_sizes_v=(16, 16), 
     activation=nn.ReLU, output_activation=nn.Tanh, output_activation_v= nn.Identity, use_gpu=False, rnn_mode='GRU', drop_p=0):
         super().__init__()

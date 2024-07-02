@@ -9,7 +9,7 @@ from collections import namedtuple
 import numpy as np  
   
 class Drone():  
-    def __init__(self, id, starting, destination, waypoints, n_points, init_acc,priority, dt=1,    
+    def __init__(self, id, starting, destination, waypoints, n_points, init_acc,priority = 5, dt=1,    
                  vel=np.zeros((3,)), vel_max=2*np.ones((3,)), goal_threshold=3, radius=1, **kwargs):  
   
         self.id = int(id)  # 无人机编号  
@@ -83,8 +83,11 @@ class Drone():
         self.previous_state = self.state
         self.move(vel, self.__noise, self.__control_std)
         self.arrive(self.state, self.current_des)
-        self.change_current_des(self, E3d, map_size)
-        return self.arrive_flag
+        if self.arrive_flag == True and self.destination_arrive_flag == False:
+            if self.i < self.n_points-1:
+                self.change_current_des(self, E3d, map_size)
+            else:
+                self.destination_arrive(self, self.state)
 
 
     def current_des_new(self, E3d, map_size):  
@@ -93,12 +96,15 @@ class Drone():
             if line_sight_partial_3D(E3d, (self.state[0], next_waypoint[0]),  (self.state[1], next_waypoint[1]),  (self.state[2], next_waypoint[2]),  map_size) == 1:  
                 self.i += 1
                 self.previous_des = self.current_des
-                self.current_des = np.array(next_waypoint)  
+                self.current_des = np.array(next_waypoint)
+                self.arrive_flag = False  
              
 
-    def if_see_des(self,E3d, map_size):
+    def if_see_des(self,E3d, map_size):##没想好怎么惩罚
         if line_sight_partial_3D(E3d, (self.state[0], self.current_des[0]),  (self.state[1], self.current_des[1]),  (self.state[2], self.current_des[2]),  map_size) == 0:
-            self.see_des_flag = False  
+            self.see_des_flag = False
+        else:
+            self.see_des_flag = True
 
 
     def change_current_des(self, E3d, map_size):###加到move_forward
@@ -145,6 +151,7 @@ class Drone():
             self.arrive_flag = False
             return False
         
+        
     def destination_arrive(self,current_position):
         position = current_position[0:3]
         dist = np.linalg.norm(position - self.destination[0:3]) 
@@ -178,39 +185,6 @@ class Drone():
         print("des_vel",vel)
         return vel
     
-############################################## circle = namedtuple('circle', 'x y z r')这里闹不清楚
-    # def collision_check(self, components):
-    #     circle = namedtuple('circle', 'x y z r')
-    #     building_obj = namedtuple('building', 'x y h r')
-        
-    #     self_circle = circle(self.state[0], self.state[1], self.state[2], self.radius)
-        
-    #     if self.collision_flag == True:
-    #         return True
-
-    #     #检查无人机间冲突
-    #     for other_drone in components['Drones'].drone_list:
-    #         if other_drone is not self and not other_drone.collision_flag: 
-    #             other_circle = circle(other_drone.state[0], other_drone.state[1], other_drone.state[2], other_drone.radius) 
-    #             if self.collision_dro_dro(self_circle, other_circle):  
-    #                 other_drone.collision_flag = True  
-    #                 self.collision_flag = True  
-    #                 print('Drones collided!')  
-    #                 return True 
-    #    # 检查无人机与圆柱建筑物冲突  
-    #     for building_obj in components['building'].building_list:  
-    #         if self.state[2] <= building_obj.h:  # 确保无人机在建筑物高度或以下  
-    #             # 计算无人机与建筑物在地面的投影圆的距离  
-    #             dis = self.distance2D(self_circle, (building_obj.x, building_obj.y))  
-    #             if dis <= self_circle.r + building_obj.r:  # 如果距离小于等于两圆半径之和，则碰撞  
-    #                 self.collision_flag = True  
-    #                 print('Drone collided with a building!')  
-    #                 return True  
-  
-    #     # 如果没有碰撞，返回False  
-    #     return False
-    # 
-    # 
     def collision_check_with_dro(self, components):  
     # 检查与其他无人机的碰撞
         circle = namedtuple('circle', 'x y z r')

@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from pathlib import Path
 import platform
-from policy_rnn_ac import rnn_ac
+from policy.policy_rnn_ac import rnn_ac
 from math import pi, sin, cos, sqrt
 import time 
 

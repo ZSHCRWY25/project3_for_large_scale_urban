@@ -2,9 +2,7 @@ import yaml
 import numpy as np
 import sys
 import math
-import matplotlib.pyplot as plt
-from PIL import Image
-from pynput import keyboard
+import env_plot
 import xlrd
 from envs.env.env_drones import env_Drone
 from envs.env.Drone import Drone
@@ -13,7 +11,7 @@ from world.grid_3D_safe_zone import grid_3D_safe_zone
 
 class env_base:
 
-    def __init__(self, map_height = 500, map_width = 500, map_high =30 , dron_num = 8, **kwargs):
+    def __init__(self, map_height = 50, map_width = 50, map_high =30 , dron_num = 6, **kwargs):
         self.map_height = map_height
         self.map_width = map_width
         self.map_high = map_high
@@ -29,8 +27,12 @@ class env_base:
         self.robots_args = []
 
     def read_start_des(self):
-        file_path=[]##这里要添加
-        self.starting, self.destinatio = self.read_coordinates_from_excel(file_path)
+        with open('drone_paths.yaml', 'r') as file:  
+            data = yaml.safe_load(file)  
+  
+        # 从数据中提取起点和终点的列表  
+        self.starting  = data['start_points']  
+        self.destination = data['end_points']
 
 
     def init_map_road(self):
@@ -40,6 +42,7 @@ class env_base:
     #E3d三维障碍物，用于学习环境
     #E3d_safe带保护区，用于路径规划
     #obs = [[x,y,h,r]]
+        self.E3d = E3d
         self.building_list = obs_list
         for i in range(self.dron_num):
             path, n_pionts = pathplan(self.map_size, self.starting[i], self.destination[i], E3d_safe)
@@ -52,16 +55,23 @@ class env_base:
 
 
     def init_environment(self, drone_class=Drone,  **kwargs):
+
+        self.read_start_des()
+        self.init_map_road()
+
         self.components['drones'] = env_Drone(drone_class=drone_class,  Drone_number=self.dron_num, step_time=1, building_list = self.building_list, 
                                               waypoints_list = self.waypoints_list,n_pointst_list = self.n_pointst_list,priority_list = self.priority_list)
         self.drone_list = self.components['drones'].Drone_list
 
-        # if self.plot:#plot函数还没改
-        #     self.world_plot = env_plot(self.__width, self.__height, self.components, offset_x=self.offset_x, offset_y=self.offset_y, **kwargs)
-        
         self.time = 0
         if self.dron_num> 0:
-            self.drone = self.components['drones'].Drone_list[0]
+            self.Drone = self.components['drones'].Drone_list[0]
+        
+
+        if self.plot:
+            self.world_plot = env_plot(self.map_size, self.building_list, self.components)
+        
+        self.time = 0
         
 
 
@@ -88,69 +98,44 @@ class env_base:
 
         if drone_id == None:
             if not isinstance(vel_list, list):
-                self.drone.move_forward(vel_list, **kwargs)
+                self.Drone.move_forward(vel_list, self.E3d,self.map_size, **kwargs)
             else:
                 for i, drone in enumerate(self.components['drones'].Drone_list):
-                   drone.move_forward(vel_list[i], **kwargs)
+                   drone.move_forward(vel_list[i],self.E3d,self.map_size, **kwargs)
         else:
             self.components['drones'].Drone_list[drone_id-1].move_forward(vel_list, **kwargs)
 
+    def see_des(self, drone_id = None):
+        if drone_id == None:
+            for drone in enumerate(self.components['drones'].Drone_list):
+                drone.if_see_des(self.E3d, self.map_size)
+            else:
+                self.components['drones'].Drone_list[drone_id-1].if_see_des(self.E3d, self.map_size)
 
-    # def render(self, time=0.05, **kwargs):
 
-    #     if self.plot:
-    #         self.world_plot.com_cla()
-    #         self.world_plot.draw_dyna_components(**kwargs)
-    #         self.world_plot.pause(time)
+
+    def render(self, time=0.05, **kwargs):
+
+        if self.plot:
+            self.world_plot.clear_plot_elements()
+            self.world_plot.draw_drones(**kwargs)
+            self.world_plot.pause(time)
             
-    #     self.time = self.time + time
+        self.time = self.time + time
         
-    # def save_fig(self, path, i):
-    #     self.world_plot.save_gif_figure(path, i)
+    def save_fig(self, path, i):
+        self.world_plot.save_gif_figure(path, i)
     
-    # def save_ani(self, image_path, ani_path, ani_name='animated', **kwargs):
-    #     self.world_plot.create_animate(image_path, ani_path, ani_name=ani_name, **kwargs)
+    def save_ani(self, image_path, ani_path, ani_name='animated', **kwargs):
+        self.world_plot.create_animate(image_path, ani_path, ani_name=ani_name, **kwargs)
 
-    # def show(self, **kwargs):
-    #     self.world_plot.draw_dyna_components(**kwargs)
-    #     self.world_plot.show()
+    def show(self, **kwargs):
+        self.world_plot.draw_drones(**kwargs)
+        self.world_plot.show()
     
-    # def show_ani(self):
-    #     self.world_plot.show_ani()
+    def show_ani(self):
+        self.world_plot.show_ani()
     
-    def read_coordinates_from_excel(file_path):
-        """
-        从 Excel 文件中读取无人机的起点坐标和终点坐标。
-
-    Args:
-        file_path (str): Excel 文件路径。
-
-    Returns:
-        tuple: 包含两个列表的元组，第一个列表是起点坐标，第二个列表是终点坐标。
-    """
-        f1origin = []
-        f2origin = []
-
-        try:
-            data = xlrd.open_workbook(file_path)
-            nums = len(data.sheets())
-
-            for i in range(nums):
-                sheet = data.sheets()[i]
-                nrows = sheet.nrows
-
-                for row in range(nrows):
-                    origin = sheet.row_values(row)[:3]
-                    destination = sheet.row_values(row)[3:]
-
-                    f1origin.append(origin)
-                    f2origin.append(destination)
-
-            return f1origin, f2origin
-        except Exception as e:
-            print(f"Error reading coordinates from Excel: {e}")
-            return None, None
-
 
     
 

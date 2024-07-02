@@ -9,7 +9,7 @@ from ir_sim.util import collision_cir_cir, collision_cir_matrix, collision_cir_s
 # obstacle_state_list: [[x, y, z, radius]]建筑物障碍物
 # rvo_vel: [x, y, z, ve_x, ve_y, ve_z, α]速度障碍物存储形式
 class env_Drone:##需要输入：无人机数量、航路点、航路点数量、优先级列表
-    def __init__(self, Drone_class=Drone, Drone_number=0, step_time=1, components=[],building_list = [], **kwargs):
+    def __init__(self, Drone_class=Drone, Drone_number = 0, step_time=1, components=[], building_list = [], **kwargs):
 
         self.Drone_class = Drone_class#分类
         self.Drone_number = Drone_number#数量
@@ -93,11 +93,6 @@ class env_Drone:##需要输入：无人机数量、航路点、航路点数量�
 
     def step(self, vel_list=[], **vel_kwargs):
 
-        # vel_kwargs: vel_type = 'diff', 'omni'
-        #             stop=True, whether stop when arrive at the goal
-        #             noise=False, 
-        #             control_std = [0.01, 0.01], noise for omni
-
         for drone, vel in zip(self.Drone_list, vel_list):
             drone.move_forward(vel, **vel_kwargs)
 
@@ -108,7 +103,7 @@ class env_Drone:##需要输入：无人机数量、航路点、航路点数量�
     def arrive_all(self):
 
         for drone in self.Drone_list:
-            if not drone.arrive():
+            if not drone.destination_arrive():
                 return False
 
         return True

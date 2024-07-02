@@ -1,7 +1,7 @@
 from envs.env.env_base import env_base
 from math import sqrt, pi, acos, degrees
 from gym import spaces
-from envs.rvo_inter import rvo_inter
+from rvo_inter import rvo_inter
 import numpy as np
 
 class ir_gym(env_base):
@@ -21,7 +21,7 @@ class ir_gym(env_base):
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(5,), dtype=np.float32)#观测空间为5维
         self.action_space = spaces.Box(low=np.array([-1, -1, -1]), high=np.array([1, 1, 1]), dtype=np.float32)#动作空间为3维，范围在[-1, 1]之间
         
-        self.reward_parameter = kwargs.get('reward_parameter', (0.2, 0.1, 0.1, 0.2, 0.2, 1, -20, 20, 20)) #：奖励函数的参数
+        self.reward_parameter = kwargs.get('reward_parameter', (0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20, 20, -2)) #：奖励函数的参数
         self.acceler = acceler
         self.arrive_flag_cur = False#到达标志
 
@@ -34,7 +34,7 @@ class ir_gym(env_base):
 
 
     def rvo_reward_list_cal(self, action_list, **kwargs):#计算机器人在执行一系列动作时的 RVO（Reciprocal Velocity Obstacles）奖励列表   （改完了，在mrnav中调用） 
-        drone_state_list = self.components['drone'].total_states() # #所有无人机状态,这个函数在env_drons里面
+        drone_state_list = self.components['drones'].total_states() # #所有无人机状态,这个函数在env_drons里面
         rvo_reward_list = [] 
         for i, (drone_state, action) in enumerate(zip(drone_state_list, action_list)):  
         # 排除当前无人机状态，获取其他无人机的状态列表  
@@ -43,13 +43,13 @@ class ir_gym(env_base):
             rvo_reward_list.append(rvo_reward)  
         return rvo_reward_list
     
-    def rvo_reward_cal(self, drone_state, other_drone_states, action, reward_parameter=(0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20, 50), **kwargs):#计算无人机的 RVO 奖励
+    def rvo_reward_cal(self, drone_state, other_drone_states, action, reward_parameter=(0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20, 20, -2), **kwargs):#计算无人机的 RVO 奖励(0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20, 20, -2)
         
         vo_flag, min_exp_time, min_dis = self.rvo.config_vo_reward(drone_state, other_drone_states, env_base.building_list, action, **kwargs)#self, drone_state, other_drone_state_list,  building_list, action=np.zeros((2,)), **kwargs
 
         des_vel = np.round(np.squeeze(drone_state[-3:]), 1)
          
-        p1, p2, p3, p4, p5, p6, p7, p8, p9 = reward_parameter
+        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10 = reward_parameter
 
         dis_des = sqrt((action[0] - des_vel[0] )**2 + (action[1] - des_vel[1])**2+(action[2] - des_vel[2] )**2)
         max_dis_des = 3
@@ -70,8 +70,8 @@ class ir_gym(env_base):
         return rvo_reward
 
     def obs_move_reward_list(self, action_list, **kwargs):#计算机器人执行一系列动作时的观测和奖励
-        drone_list = self.components['drone'].Drone_list()
-        drone_state_list = self.components['drone'].total_states() 
+        drone_list = self.components['drones'].Drone_list()
+        drone_state_list = self.components['drones'].total_states() 
         obs_reward_list = []
         for i, (drone, action) in enumerate(zip(drone_list , action_list)):  
         # 排除当前无人机状态，获取其他无人机的状态列表  
@@ -113,6 +113,9 @@ class ir_gym(env_base):
             else:
                 destination_arrive_reward_flag = False
 
+        deviation = drone.Deviation_from_route()
+
+
 
         obs_vo_list, vo_flag, min_exp_time, collision_flag, obs_building_list = self.rvo.config_vo_inf(self, drone_state, odro_state_list, env_base.building_list, action)
         #obs_vo_list_nm, vo_flag, min_exp_time, collision_flag, obs_building_list
@@ -134,7 +137,7 @@ class ir_gym(env_base):
         observation = np.round(np.concatenate([propri_obs, exter_obs_vo, exter_obs_building]), 2)##链接
 
         # dis2goal = sqrt( robot.state[0:2] - robot.goal[0:2
-        mov_reward = self.mov_reward(collision_flag, arrive_reward_flag, destination_arrive_reward_flag, self.reward_parameter, min_exp_time)
+        mov_reward = self.mov_reward(collision_flag, arrive_reward_flag, destination_arrive_reward_flag, deviation, self.reward_parameter, min_exp_time)
 
         reward = mov_reward
 
@@ -145,17 +148,17 @@ class ir_gym(env_base):
         
         return observation, reward, done, info, finish##[内外观测（自身+其他无人机速度障碍+冲突建筑物），移动奖励（碰撞+到点+终点），碰撞标准，到点标志 ，到终点标志]
 
-    def mov_reward(self, collision_flag, arrive_reward_flag, destination_arrive_reward_flag, reward_parameter=(0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20, 20), min_exp_time=100, dis2goal=100):#计算机器人的移动奖励,根据碰撞标志、到达标志和其他参数计算奖励。
+    def mov_reward(self, collision_flag, arrive_reward_flag, destination_arrive_reward_flag, deviation, reward_parameter=(0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20, 20, -2), min_exp_time=100, dis2goal=100):#计算机器人的移动奖励,根据碰撞标志、到达标志和其他参数计算奖励。
 
-        p1, p2, p3, p4, p5, p6, p7, p8, p9 = reward_parameter
+        p1, p2, p3, p4, p5, p6, p7, p8, p9, p10 = reward_parameter
 
         collision_reward = p7 if collision_flag else 0
         arrive_reward = p8 if arrive_reward_flag else 0
         destination_arrive_reward = p9 if destination_arrive_reward_flag else 0
         time_reward = 0
         #time_reward = -p6 * (actual_time - min_exp_time) if actual_time is not None and actual_time > min_exp_time else 0  
-      
-        mov_reward = collision_reward + arrive_reward + time_reward + destination_arrive_reward
+        deviation_reward = deviation * p10
+        mov_reward = collision_reward + arrive_reward + time_reward + destination_arrive_reward+deviation_reward
 
         return mov_reward
 
@@ -218,8 +221,8 @@ class ir_gym(env_base):
         self.drone_reset(id)
 
     def env_observation(self):#计算环境中所有无人机的观测，类似于 env_reset，但不重置环境或无人机状态
-        drone_list = self.components['drone'].Drone_list()
-        drone_state_list = self.components['drone'].total_states() 
+        drone_list = self.components['drones'].Drone_list()
+        drone_state_list = self.components['drones'].total_states() 
         observation_list = []
         for i, (drone) in enumerate(zip(drone_list)):  
         # 排除当前无人机状态，获取其他无人机的状态列表  

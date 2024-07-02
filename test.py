@@ -5,23 +5,55 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import FancyArrow  
 import numpy as np  
 
+# 初始化数据  
 fig = plt.figure()  
 ax = fig.add_subplot(111, projection='3d')  
-
-previous_state = [0,0,0]
-state = [5,5,5]
-trajectory_line_list = []
-
-x_list = [previous_state[0], state[0]]  
-y_list = [previous_state[1], state[1]]  
-z_list = [previous_state[2], state[2]]  
-c = ax.plot(x_list, y_list, z_list, color = 'r')[0]
-trajectory_line_list.append(c)
-
-for line in trajectory_line_list:  
-    line.remove()  # 直接从列表中获取Line3D对象并删除  
-trajectory_line_list.clear()
+  
+# 初始位置  
+x, y, z = 0, 0, 0  
+line, = ax.plot([x], [y], [z], 'ro')  # 绘制初始点，'ro'表示红色圆圈  
+  
+# 定义更新函数  
+def update(frame):  
+    # 计算新的位置  
+    t = frame / 10.0  # 时间参数  
+    x = np.sin(t)  
+    y = np.cos(t)  
+    z = t  
+      
+    # 更新点的位置  
+    line.set_data_3d([x], [y], [z])  
+      
+    # 设置坐标轴范围  
+    ax.set_xlim(-1.5, 1.5)  
+    ax.set_ylim(-1.5, 1.5)  
+    ax.set_zlim(0, 10)  
+      
+    return line,  
+  
+# 创建动画  
+ani = FuncAnimation(fig, update, frames=np.arange(0, 100), interval=100, blit=False)  
+  
+# 显示图形  
 plt.show()
+
+# fig = plt.figure()  
+# ax = fig.add_subplot(111, projection='3d')  
+
+# previous_state = [0,0,0]
+# state = [5,5,5]
+# trajectory_line_list = []
+
+# x_list = [previous_state[0], state[0]]  
+# y_list = [previous_state[1], state[1]]  
+# z_list = [previous_state[2], state[2]]  
+# c = ax.plot(x_list, y_list, z_list, color = 'r')[0]
+# trajectory_line_list.append(c)
+
+# for line in trajectory_line_list:  
+#     line.remove()  # 直接从列表中获取Line3D对象并删除  
+# trajectory_line_list.clear()
+# plt.show()
 
 
 
