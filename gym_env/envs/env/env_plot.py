@@ -129,8 +129,8 @@ class env_plot:
 
 
     def draw_drones(self):#改完
-        drones = self.components.get('robots', None)
-        for drone in drones.Drone_list_list:
+        drones = self.components.get('drones', None)
+        for drone in drones.Drone_list:
             self.draw_drone(drone)
 
 
@@ -155,7 +155,7 @@ class env_plot:
             self.trajectory_line_list.append(c) 
   
         if show_vel:  
-            vel_x, vel_y, vel_z = drone.state[3:]   
+            vel_x, vel_y, vel_z = drone.vel   
             d = self.draw_vector( x, y, z, vel_x, vel_y, vel_z, color='r') 
             self.vel_line_list.append(d)
           
@@ -163,7 +163,7 @@ class env_plot:
 
 
     def draw_vector(self, x, y, z, vel_x, vel_y, vel_z, color='r'):  
-         # 计算速度向量的模（长度）  
+         # 计算速度向量的模（长度）  (可以归一化箭头长度)
         vel_norm = np.linalg.norm([vel_x, vel_y, vel_z])  
       
         # 如果速度为0，则不绘制箭头  
@@ -171,7 +171,7 @@ class env_plot:
             return None  
       
         scale_factor = 0.2  
-        dx, dy, dz = dx * scale_factor, dy * scale_factor, dz * scale_factor
+        dx, dy, dz = vel_x * scale_factor, vel_y * scale_factor, vel_z * scale_factor
         # 绘制箭头
         a = self.ax.quiver(x,y,z,dx,dy,dz)
         return a

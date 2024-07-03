@@ -29,6 +29,7 @@ class mdin(gym.Env):
         self.ir_gym.drone_step(action, stop=stop)
         obs_list, mov_reward, done_list, info_list, finish_list = self.ir_gym.obs_move_reward_list(action, **kwargs)
 
+
         reward_list = [x+y for x, y in zip(rvo_reward_list, mov_reward)]
         
         return obs_list, reward_list, done_list, info_list, finish_list

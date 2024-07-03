@@ -59,10 +59,10 @@ class Drone():
         self.goal_threshold = goal_threshold  # 到达目标的阈值 
 
         #self.components = components 
-        self.radius_collision = round(radius + kwargs.get('radius_exp', 1), 2)  # 碰撞检测半径
+        self.radius_collision = round(radius)  # 碰撞检测半径
         
         # 添加noise参数，如果kwargs中没有提供，则默认为False  
-        self.__noise = kwargs.get('noise', True)  
+        self.__noise = kwargs.get('noise', False)  
   
         # 添加control_std参数，如果kwargs中没有提供，则使用默认值  
         self.__control_std = kwargs.get('control_std', [0.06, 0.06, 0.06])  
@@ -91,10 +91,11 @@ class Drone():
 
         self.previous_state = self.state
         self.move(vel, self.__noise, self.__control_std)
+        print(self.state)
         self.arrive(self.state, self.current_des)
         if self.arrive_flag == True and self.destination_arrive_flag == False:
             if self.i < self.n_points-1:
-                self.change_current_des(self, E3d, map_size)
+                self.change_current_des(E3d, map_size)
             else:
                 self.destination_arrive(self, self.state)
 
@@ -118,11 +119,11 @@ class Drone():
 
     def change_current_des(self, E3d, map_size):###加到move_forward
         if self.arrive(self.state, self.current_des):
-            self.current_des_new(self, E3d, map_size)
+            self.current_des_new(E3d, map_size)
 
     
 
-    def move(self, vel, noise=True, std=None):  
+    def move(self, vel, noise=False, std=None):  
         if std is None:  
             std = self.__control_std
         #print(self.state)
@@ -131,7 +132,7 @@ class Drone():
         self.vel = vel 
 
 
-    def motion(self, vel, noise = True, control_std = None):
+    def motion(self, vel, noise = False, control_std = None):
         current_state = self.state
         sampletime = self.dt
         if control_std is None:  
@@ -191,7 +192,6 @@ class Drone():
             vel = vel_scaled  # 确保是(3,)形状的  
         else:    
             vel = np.zeros(3,)
-        print("des_vel",vel)
         return vel
     
     def collision_check_with_dro(self, components):  
@@ -224,14 +224,14 @@ class Drone():
     def dronestate(self):
         v_des = self.cal_des_vel()
         rc_array = np.array([self.radius_collision])
-        priority = np.array(self.priority)
+        priority = np.array([self.priority])
         # state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
         #return np.concatenate((self.state, self.vel, rc_array,priority, v_des), axis = 0)
         return np.concatenate((self.state, self.vel, [rc_array[0]],[priority[0]], v_des))
 
     def obs_state(self):
         rc_array = self.radius * np.ones((1,))
-        return np.concatenate((self.state[0:3], self.vel, rc_array), axis = 0) 
+        return np.concatenate((self.state[0:3], self.vel, rc_array)) 
 
 
     def reset(self):

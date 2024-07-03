@@ -33,14 +33,15 @@ class rvo_inter(reciprocal_vel_obs):
         obs_vo_list = []
         collision_flag = False
         vo_flag = False
-        min_exp_time = inf
+        #min_exp_time = inf
+        min_dis = inf
 
         for vo_inf in vo_list:
             if vo_inf[1] is True:# vo_flag
-                obs_vo_list.append(vo_inf[0])#[x, y, z, ve_x, ve_y, ve_z, α,min_dis, input_exp_time]
-                vo_flag = True
-                if vo_inf[2] < min_exp_time:#exp_time
-                    min_exp_time = vo_inf[2]##目的是寻找当前威胁最大障碍物
+                obs_vo_list.append(vo_inf[0])#[x, y, z, ve_x, ve_y, ve_z, α, vo_flag, exp_time, collision_flag, min_dis]
+                vo_flag = True#[x, y, z, rel_x, rel_y, rel_z, 0, vo_flag, 0, collision_flag, dis_mr]
+                if vo_inf[4] < min_dis:#exp_time
+                    min_dis = vo_inf[2]##目的是寻找当前威胁最大障碍物
             
             if vo_inf[3] is True: collision_flag = True
 
@@ -54,15 +55,15 @@ class rvo_inter(reciprocal_vel_obs):
         if self.nm == 0:
             obs_vo_list_nm = []
 
-        return obs_vo_list_nm, vo_flag, min_exp_time, collision_flag, obs_building_list
+        return obs_vo_list_nm, vo_flag, min_dis, collision_flag, obs_building_list#obs_vo_list, vo_flag, min_exp_time, collision_flag, obs_building_list
     
     def config_vo_reward(self, drone_state, other_drone_state_list,  building_list, action=np.zeros((2,)), **kwargs):#只检查是否与速度障碍物有冲突，不包括建筑物
 
         odro_list, obs_building_list= self.preprocess(drone_state, other_drone_state_list, building_list)
 
         vo_list = list(map(lambda x: self.config_vo_circle2(drone_state, x, action, **kwargs), odro_list))#(self, state, odro, action, **kwargs):
-        vo_flag = False
-        min_exp_time = inf
+        vo_flag = False#[x, y, z, ve_x, ve_y, ve_z, α, vo_flag, exp_time, collision_flag, min_dis]
+        min_exp_time = inf#[x, y, z, rel_x, rel_y, rel_z, 0, vo_flag, 0, collision_flag, dis_mr]
         min_dis = inf
 
         for vo_inf in vo_list:#[observation_vo, vo_flag, exp_time, collision_flag, min_dis]
@@ -86,7 +87,7 @@ class rvo_inter(reciprocal_vel_obs):
         self_drone_state = np.array(drone_state[0:3])
         for drone in  dro_state_list:
             other_drone_state = np.array(drone[0:3])
-            if self_drone_state == other_drone_state:
+            if np.all(self_drone_state == other_drone_state):
                 continue#排除自己
             dif = self_drone_state -other_drone_state
             dis = np.linalg.norm(dif)
@@ -101,7 +102,9 @@ class rvo_inter(reciprocal_vel_obs):
                 if diss <= 10:
                     vec = np.array(drone_state[3:6])
                     angle = self.calculate_angle_between_vectors(diff, vec)
-                    if -pi/4 <= angle <= pi/4:
+                    if angle == None:
+                        continue
+                    elif -pi/4 <= angle <= pi/4:
                         obs_building_list.append(building)
 
         return odro_list, obs_building_list
@@ -118,7 +121,7 @@ class rvo_inter(reciprocal_vel_obs):
         x, y, z, vx, vy, vz, r = state[0:7]#state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
         Pa = [x, y, z]
         Va = [vx, vy, vz]
-        mx, my, mz,  mvx, mvy, mvz, mr = odro[0:7]#输入的状态中提取机器人和圆形障碍物的位置、速度和半径。moving_state_list: [[x, y, z, vx, vy, vz, radius, prb]]其他无人机
+        mx, my, mz,  mvx, mvy, mvz, mr = odro[0:7]#输入的状态中提取位置、速度和半径。moving_state_list: [[x, y, z, vx, vy, vz, radius, prb]]其他无人机
         Pb = [mx, my, mz]
         Vb = [mvx, mvy, mvz]
 
@@ -131,7 +134,7 @@ class rvo_inter(reciprocal_vel_obs):
 
         dis_mr = sqrt((rel_y)**2 + (rel_x)**2 + (rel_z)**2)
         
-        real_dis_mr = sqrt((rel_y)**2 + (rel_x)**2)
+        real_dis_mr = sqrt((rel_y)**2 + (rel_x)**2 + (rel_z)**2)
         
         env_train = kwargs.get('env_train', self.env_train)
 
@@ -146,13 +149,15 @@ class rvo_inter(reciprocal_vel_obs):
             if dis_mr <= r + mr:
                 dis_mr = r + mr
 
+        if collision_flag == True:
+            return [[x, y, z, rel_x, rel_y, rel_z, 0], vo_flag, 0, collision_flag, dis_mr]#[observation_vo, vo_flag, exp_time, collision_flag, min_dis]
         ##以上检测两个无人机距离是否小于安全距离
 
 
         alpha = get_alpha(Pa, Pb, r, mr)
         PAA = get_PAA(Pa, state[7], odro[7], Va, Vb)
-        rvo_array = [rel_x, rel_y, rel_z]# rvo_vel: [x, y, z, ve_x, ve_y, ve_z, α]速度障碍物存储形式
-        vo = PAA[:3]+rvo_array[:3]+[alpha]#vo: [x, y, z, ve_x, ve_y, ve_z, α]
+        rvo_array = [rel_x, rel_y, rel_z]
+        vo = PAA[:3]+rvo_array[:3]+[alpha]#vo: [x, y, z, ve_x, ve_y, ve_z, α]速度障碍物存储形式
 
  
         rel_vx = 2*action[0] - mvx - vx
@@ -162,40 +167,40 @@ class rvo_inter(reciprocal_vel_obs):
 
         exp_time = inf
 
-        if self.vo_out_jud_vector(action[0], action[1], action[2], vo):##检测此时无人机所选择速度是否在速度障碍物中
+        if self.vo_out_jud_vector(state, action[0], action[1], action[2], vo):##检测此时无人机所选择速度是否在速度障碍物中agent_state, vx, vy, vz, odro_rvo
             vo_flag = False
             exp_time = inf
         else:
-            exp_time = cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx,rel_vy,rel_vz, r, mr) 
-            if exp_time < self.ctime_threshold:
-                vo_flag = True
-            else:
-                vo_flag = False
-                exp_time = inf
+            vo_flag = True
+            # exp_time = cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx, rel_vy, rel_vz, r, mr) 
+            # if exp_time < self.ctime_threshold:
+            #     vo_flag = True
+            # else:
+            #     vo_flag = False
+            #     exp_time = inf
             
-        input_exp_time = 1 / (exp_time+0.2)
+        # input_exp_time = 1 / (exp_time+0.2##cal_vo_exp_tim这个函数有点问题
         min_dis = real_dis_mr-mr
 
-        observation_vo = PAA[:3]+rvo_array[:3]+[alpha, min_dis, input_exp_time]#[x, y, z, ve_x, ve_y, ve_z, α]
+        observation_vo = PAA[:3]+rvo_array[:3]+[alpha, min_dis, dis_mr]#[x, y, z, ve_x, ve_y, ve_z, α]
         #速度障碍物的方向和速度。
         #计算期望时间，判断是否存在速度障碍物。
         #构建观测信息，包括速度障碍物的相关参数。
-        return [observation_vo, vo_flag, exp_time, collision_flag, min_dis]#[observation_vo, vo_flag, exp_time, collision_flag, min_dis]
+        return [observation_vo, vo_flag, exp_time, collision_flag, min_dis]#[[x, y, z, ve_x, ve_y, ve_z, α], vo_flag, exp_time, collision_flag, min_dis]
 
 
     def vo_out_jud_vector(self, agent_state, vx, vy, vz, odro_rvo):##不碰撞返回ture alpha < beta
         vector_out = True
         Panew = [0, 0, 0]
-        Panew[0] = agent_state[0] + vx*self.delta_t
-        Panew[1] = agent_state[1] + vy*self.delta_t
-        Panew[2] = agent_state[2] + vz*self.delta_t
+        Panew[0] = agent_state[0] + 2*vx*self.delta_t
+        Panew[1] = agent_state[1] + 2*vy*self.delta_t
+        Panew[2] = agent_state[2] + 2*vz*self.delta_t
+
         
         PAA = odro_rvo[0:3]
-        rvo_array =  odro_rvo[4:6]
+        rvo_array =  odro_rvo[3:6]
         alpha = odro_rvo[6]
-        arr_AA_Anew = []
-        for i in range(3):
-            arr_AA_Anew.append = Panew[i] - PAA[i]
+        arr_AA_Anew = [Panew[i] - PAA[i] for i in range(len(PAA))]
 
         beta = get_beta(rvo_array, arr_AA_Anew)
         if alpha > beta:

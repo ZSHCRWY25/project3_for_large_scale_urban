@@ -12,11 +12,14 @@ from time import time
 ####速度障碍法:Pa,Pb,ra,rb,pra,prb
 
 def get_alpha(Pa, Pb, ra, rb):##计算圆锥张角
-        R = ra+rb
-        x1, y1, z1 = Pa
-        x2, y2, z2 = Pb
-        alpha = asin(R/sqrt((x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2))*(180/pi)
+        R = ra + rb
+        pa = np.array(Pa)  
+        pb = np.array(Pb)
+        norm_ab = np.linalg.norm(pa - pb)
+        alpha = asin(R/norm_ab)
+        alpha = wraptopi(alpha)
         alpha_degrees = round(np.degrees(alpha), 1)
+
         return alpha_degrees
     
 def get_PAA(Pa, pra, prb, Va, Vb):##计算互惠速度障碍物起点
@@ -47,15 +50,17 @@ def get_beta(A, B):##计算新位置与速度障碍物的夹角
         # 计算向量A和B的模长
         magnitude_A = np.linalg.norm(A)
         magnitude_B = np.linalg.norm(B)
+        AB = magnitude_A * magnitude_B
     
         # 计算夹角的cos值
-        cos_angle = dot_product / (magnitude_A * magnitude_B)
+        cos_angle = dot_product / AB
     
         # 求得夹角（弧度制）
-        angle_radians = np.arccos(cos_angle)
+        angle_radians = wraptopi(np.arccos(cos_angle))
     
         # 转换为角度值并保留小数点后一位
-        beta = round(np.degrees(angle_radians), 1)
+        beta =  round(np.degrees(angle_radians), 1)
+        
         return beta
     
 
@@ -159,6 +164,9 @@ def cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx,rel_vy,rel_vz,  ra, rb):
         t1 = ( -b + sqrt(temp) ) / (2 * a)
         t2 = ( -b - sqrt(temp) ) / (2 * a)
 
+        if t1 < 0 and t2 < 0:
+              return -1
+
         t3 = t1 if t1 >= 0 else inf
         t4 = t2 if t2 >= 0 else inf
         
@@ -170,7 +178,7 @@ def cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx,rel_vy,rel_vz,  ra, rb):
 def distance(point1, point2):
         return sqrt( (point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2 + (point2[2] - point1[2]) ** 2)
 
-@staticmethod
+
 def wraptopi(theta):
         if theta > pi:
             theta = theta - 2*pi

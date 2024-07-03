@@ -3,43 +3,121 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation  
 from mpl_toolkits.mplot3d import Axes3D  
 from matplotlib.patches import FancyArrow  
-import numpy as np  
+import numpy as np 
+from math import inf, sqrt 
 
-def plot_buildings_on_map(map_size, buildings):  
-        # 地图大小可能包含x、y和z轴的范围，但在这里我们只关心x和y的范围  
-        x_range, y_range, z_range = map_size
+def cal_exp_tim2d(rel_x, rel_y, rel_vx, rel_vy, r):
+        # rel_x: xa - xb
+        # rel_y: ya - yb
+
+        # (vx2 + vy2)*t2 + (2x*vx + 2*y*vy)*t+x2+y2-(r+mr)2 = 0
+
+        a = rel_vx ** 2 + rel_vy ** 2
+        b = 2* rel_x * rel_vx + 2* rel_y * rel_vy
+        c = rel_x ** 2 + rel_y ** 2 - r ** 2
+
+        if c <= 0:
+            return 0
+
+        temp = b ** 2 - 4 * a * c
+
+        if temp <= 0:
+            t = inf
+        else:
+            t1 = ( -b + sqrt(temp) ) / (2 * a)
+            t2 = ( -b - sqrt(temp) ) / (2 * a)
+
+            t3 = t1 if t1 >= 0 else inf
+            t4 = t2 if t2 >= 0 else inf
         
-        fig = plt.figure(figsize=(8, 6))  
-        ax = fig.add_subplot(111, projection='3d')  
-      
-        # 设置地图的x和y轴范围  
-        ax.set_xlim(0, x_range)  
-        ax.set_ylim(0, y_range)  
-        ax.set_zlim(0, z_range + 5)  # z轴范围基于建筑物最高度+一点额外空间  
-      
-        # 绘制每个建筑物（圆柱体）  
-        for b in buildings:  
-            x, y, h, r = b  
-          
-            # 生成极坐标和高度  
-            u = np.linspace(0, 2 * np.pi, 50)  
-            h_vals = np.linspace(0, h, 20)  # 足够的高度切片以形成平滑的圆柱体  
-          
-         # 使用meshgrid生成二维网格上的X, Y, Z  
-            U, H = np.meshgrid(u, h_vals)  
-            X = x + r * np.sin(U)  # 考虑建筑物的x坐标  
-            Y = y + r * np.cos(U)  # 考虑建筑物的y坐标  
-            Z = H  
-          
-            # 绘制曲面，并设置颜色为蓝色  
-            ax.plot_surface(X, Y, Z, linewidth=0, facecolor='b', shade=True, alpha=0.6)
-            plt.gca().set_prop_cycle(None)
+            t = min(t3, t4)
+
+        return t
+    
+def cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx, rel_vy, rel_vz,  ra, rb):
+    r = ra + rb
+
+        # rel_x: xa - xb
+        # rel_y: ya - yb
+        # rel_z: za - zb
+        # (vx2 + vy2 + vz2)*t2 + (2x*vx + 2*y*vy)*t+x2+y2+z2-(r+mr)2 = 0
+        # 计算期望碰撞时间。
+
+    a = rel_vx ** 2 + rel_vy ** 2 + rel_vz**2
+    b = 2* rel_x * rel_vx + 2* rel_y * rel_vy + 2* rel_z * rel_vz 
+    c = rel_x ** 2 + rel_y ** 2 + rel_z ** 2 - r ** 2
+
+    if c <= 0:
+        return 0
+
+    temp = b ** 2 - 4 * a * c
+
+    if temp <= 0:
+        t = inf
+    else:
+        t1 = ( -b + sqrt(temp) ) / (2 * a)
+        t2 = ( -b - sqrt(temp) ) / (2 * a)
+
+        t3 = t1 if t1 >= 0 else inf
+        t4 = t2 if t2 >= 0 else inf
+        
+        t = min(t3, t4)
+
+    return t
+rel_x=8
+rel_y=4
+rel_z = 1
+
+rel_vx = 2
+rel_vy = 1
+rel_vz = 0.48
+
+ra=rb=1
+#t = cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx,rel_vy,rel_vz,  ra, rb)
+b = cal_exp_tim2d(rel_x, rel_y, rel_vx, rel_vy, 1)
+print(b)
 
 
-building_list = [[20, 9, 4, 4], [45, 13, 4, 4], [8, 20, 6, 2], [5, 22, 4, 2], [11, 26, 10, 4], [25, 33, 5, 2], [35, 39, 6, 2], [0, 45, 10, 3]]
-map_size = [50, 50, 10]
-plot_buildings_on_map(map_size, building_list)
-plt.show()
+
+
+
+
+
+# def plot_buildings_on_map(map_size, buildings):  
+#         # 地图大小可能包含x、y和z轴的范围，但在这里我们只关心x和y的范围  
+#         x_range, y_range, z_range = map_size
+        
+#         fig = plt.figure(figsize=(8, 6))  
+#         ax = fig.add_subplot(111, projection='3d')  
+      
+#         # 设置地图的x和y轴范围  
+#         ax.set_xlim(0, x_range)  
+#         ax.set_ylim(0, y_range)  
+#         ax.set_zlim(0, z_range + 5)  # z轴范围基于建筑物最高度+一点额外空间  
+      
+#         # 绘制每个建筑物（圆柱体）  
+#         for b in buildings:  
+#             x, y, h, r = b  
+          
+#             # 生成极坐标和高度  
+#             u = np.linspace(0, 2 * np.pi, 50)  
+#             h_vals = np.linspace(0, h, 20)  # 足够的高度切片以形成平滑的圆柱体  
+          
+#          # 使用meshgrid生成二维网格上的X, Y, Z  
+#             U, H = np.meshgrid(u, h_vals)  
+#             X = x + r * np.sin(U)  # 考虑建筑物的x坐标  
+#             Y = y + r * np.cos(U)  # 考虑建筑物的y坐标  
+#             Z = H  
+          
+#             # 绘制曲面，并设置颜色为蓝色  
+#             ax.plot_surface(X, Y, Z, linewidth=0, facecolor='b', shade=True, alpha=0.6)
+#             plt.gca().set_prop_cycle(None)
+
+
+# building_list = [[20, 9, 4, 4], [45, 13, 4, 4], [8, 20, 6, 2], [5, 22, 4, 2], [11, 26, 10, 4], [25, 33, 5, 2], [35, 39, 6, 2], [0, 45, 10, 3]]
+# map_size = [50, 50, 10]
+# plot_buildings_on_map(map_size, building_list)
+# plt.show()
 
 
 

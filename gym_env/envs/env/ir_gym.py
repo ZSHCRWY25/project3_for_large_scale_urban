@@ -38,7 +38,7 @@ class ir_gym(env_base):
         
 
     def cal_des_list(self):#计算所有无人机的目标速度列表。(改完)
-        des_vel_list = [drone.cal_des_vel() for drone in self.Drone_list]
+        des_vel_list = [drone.cal_des_vel() for drone in self.drone_list]
         return des_vel_list
 
 
@@ -54,7 +54,7 @@ class ir_gym(env_base):
     
     def rvo_reward_cal(self, drone_state, other_drone_states, action, reward_parameter=(0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20, 20, -2), **kwargs):#计算无人机的 RVO 奖励(0.2, 0.1, 0.1, 0.2, 0.2, 1, -10, 20, 20, -2)
         
-        vo_flag, min_exp_time, min_dis = self.rvo.config_vo_reward(drone_state, other_drone_states, env_base.building_list, action, **kwargs)#self, drone_state, other_drone_state_list,  building_list, action=np.zeros((2,)), **kwargs
+        vo_flag, min_exp_time, min_dis = self.rvo.config_vo_reward(drone_state, other_drone_states, self.building_list, action, **kwargs)#self, drone_state, other_drone_state_list,  building_list, action=np.zeros((2,)), **kwargs
 
         des_vel = np.round(np.squeeze(drone_state[-3:]), 1)
          
@@ -79,13 +79,12 @@ class ir_gym(env_base):
         return rvo_reward
 
     def obs_move_reward_list(self, action_list, **kwargs):#计算机器人执行一系列动作时的观测和奖励
-        drone_list = self.components['drones'].Drone_list()
         drone_state_list = self.components['drones'].total_states() 
         obs_reward_list = []
-        for i, (drone, action) in enumerate(zip(drone_list , action_list)):  
+        for i, (drone, action) in enumerate(zip(self.drone_list , action_list)):  
         # 排除当前无人机状态，获取其他无人机的状态列表  
             other_drone_state_list = [s for j, s in enumerate(drone_state_list ) if j != i]
-            obs, reward, done, info, finish = self.observation_reward(drone, other_drone_state_list, action,env_base.building_list, **kwargs)
+            obs, reward, done, info, finish = self.observation_reward(drone, other_drone_state_list, action)
             #obs, reward, done, info = 
             obs_reward_list.append((obs, reward, done, info, finish))
 
@@ -99,16 +98,16 @@ class ir_gym(env_base):
 
         return observation_list, reward_list, done_list, info_list, finish_list 
 
-    def observation_reward(self, drone, odro_state_list,action, **kwargs):#算无人机的观测和奖励。
+    def observation_reward(self, drone, odro_state_list,action):#算无人机的观测和奖励。
 
        # 计算无人机的内部观测和外部观测。
        # 返回观测、奖励、完成标志和其他信息。
         drone_state = drone.dronestate()
         des_vel = np.squeeze(drone.cal_des_vel())
-       
+        destination_arrive_reward_flag = False
         done = False
 
-        if drone.arrive() and not drone.arrive_flag:##到途经航路点奖励
+        if drone.arrive(drone.state, drone.current_des) and not drone.arrive_flag:##到途经航路点奖励
             drone.arrive_flag = True
             arrive_reward_flag = True
         else:
@@ -125,8 +124,8 @@ class ir_gym(env_base):
         deviation = drone.Deviation_from_route()
 
 
-
-        obs_vo_list, vo_flag, min_exp_time, collision_flag, obs_building_list = self.rvo.config_vo_inf(self, drone_state, odro_state_list, env_base.building_list, action)
+############################################################################drone_state, drone_state_list, building_list, action
+        obs_vo_list, vo_flag, min_dis, collision_flag, obs_building_list = self.rvo.config_vo_inf(drone_state, odro_state_list, self.building_list, action)
         #obs_vo_list_nm, vo_flag, min_exp_time, collision_flag, obs_building_list
         cur_vel = np.squeeze(drone.vel)
         radius = drone.radius_collision* np.ones(1,)
@@ -146,7 +145,7 @@ class ir_gym(env_base):
         observation = np.round(np.concatenate([propri_obs, exter_obs_vo, exter_obs_building]), 2)##链接
 
         # dis2goal = sqrt( robot.state[0:2] - robot.goal[0:2
-        mov_reward = self.mov_reward(collision_flag, arrive_reward_flag, destination_arrive_reward_flag, deviation, self.reward_parameter, min_exp_time)
+        mov_reward = self.mov_reward(collision_flag, arrive_reward_flag, destination_arrive_reward_flag, deviation, self.reward_parameter, min_dis)
 
         reward = mov_reward
 
@@ -196,7 +195,7 @@ class ir_gym(env_base):
         drone_state = drone.dronestate() #提取当前位置、速度、大小、优先级、期望速度
         des_vel = np.squeeze(drone_state[-3:])# state: [x, y, z, vx, vy, vz, radius, pra, vx_des, vy_des, vz_des]
         
-        obs_vo_list, _, min_exp_time, _ , obs_building_list= self.rvo.config_vo_inf(drone_state, other_drone_state_list, env_base.building_list)#如果存在速度障碍物（VO），还计算外部观测
+        obs_vo_list, _, min_dis, _ , obs_building_list= self.rvo.config_vo_inf(drone_state, other_drone_state_list, self.building_list)#如果存在速度障碍物（VO），还计算外部观测
         cur_vel = np.squeeze(drone.vel)
         radius = drone.radius_collision* np.ones(1,)
 
@@ -236,7 +235,7 @@ class ir_gym(env_base):
         for i, (drone) in enumerate(zip(drone_list)):  
         # 排除当前无人机状态，获取其他无人机的状态列表  
             other_drone_state = [s for j, s in enumerate(drone_state_list ) if j != i]
-            observation = self.observation(drone, other_drone_state,env_base.building_list)
+            observation = self.observation(drone, other_drone_state,self.building_list)
             observation_list.append((observation))
 
         return observation_list
