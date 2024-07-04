@@ -13,7 +13,7 @@ from policy.policy_rnn_ac import rnn_ac
 from math import pi, sin, cos, sqrt
 import time 
 
-class post_train:
+class  post_train:
     def __init__(self, env, num_episodes=100, max_ep_len=150, acceler_vel = 1.0, reset_mode=3, render=True, save=False, neighbor_region=4, neighbor_num=5, args=None, **kwargs):
 
         self.env = env
@@ -23,7 +23,7 @@ class post_train:
         self.reset_mode = reset_mode#重置环境
         self.render=render#是否渲染环境
         self.save=save#是否保存结果或数据
-        self.robot_number = self.env.ir_gym.Drone_number
+        self.drone_number = self.env.ir_gym.Drone_number
         self.step_time = self.env.ir_gym.step_time
 
         self.inf_print = kwargs.get('inf_print', True)

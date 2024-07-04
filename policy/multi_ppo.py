@@ -13,7 +13,7 @@ import scipy
 import scipy.signal
 import time
 import os
-from rl_rvo_nav.policy_test.post_train import post_train
+from train.post_train import post_train
 import threading
 from mpi4py import MPI
 

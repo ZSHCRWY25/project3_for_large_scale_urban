@@ -113,8 +113,8 @@ class env_plot:
             plt.gca().set_prop_cycle(None)   
       
     def draw_waypoints(self, drone):
-        if len(drone.waypoints)>2:
-            middle_waypoints = drone.waypoints[1:-1]  
+        if len(drone.waypoints)>=2:
+            middle_waypoints = drone.waypoints#[1:-1]  
  
             x = [wp[0] for wp in middle_waypoints]  
             y = [wp[1] for wp in middle_waypoints]  
@@ -129,13 +129,13 @@ class env_plot:
 
 
     def draw_drones(self):#改完
-        drones = self.components.get('drones', None)
+        drones = self.components.get('drones')
         for drone in drones.Drone_list:
             self.draw_drone(drone)
 
 
 
-    def draw_drone(self, drone, drone_color = 'g', destination_color='r', show_vel=True, show_goal=True, show_text=True, show_traj=False, traj_color='-g', **kwargs):
+    def draw_drone(self, drone, drone_color = 'g', destination_color='r', show_vel=False, show_goal=True, show_text=False, show_traj=False, traj_color='-g', **kwargs):
         
         x, y, z = drone.state[:3]  
         # 绘制无人机位置（使用散点图或其他方法）  
@@ -214,20 +214,20 @@ class env_plot:
 
         self.text_list.clear() 
   
-          # 清除速度向量  
-        for line in self.vel_line_list:  
-            line.remove()  # 注意这里假设vel_line_list包含的是Quiver或Line2D对象  
-        self.vel_line_list.clear()  
+        #   # 清除速度向量  
+        # for line in self.vel_line_list:  
+        #     line.remove()  # 注意这里假设vel_line_list包含的是Quiver或Line2D对象  
+        # self.vel_line_list.clear()  
   
-        # 清除轨迹线  
-        for line in self.trajectory_line_list:  
-            # 如果trajectory_line_list包含的是Line2D对象的列表，你需要遍历每个列表  
-            if isinstance(line, list):  
-                for segment in line:  
-                    segment.remove()  
-            else:  
-                line.remove()  
-        self.trajectory_line_list.clear()  
+        # # 清除轨迹线  
+        # for line in self.trajectory_line_list:  
+        #     # 如果trajectory_line_list包含的是Line2D对象的列表，你需要遍历每个列表  
+        #     if isinstance(line, list):  
+        #         for segment in line:  
+        #             segment.remove()  
+        #     else:  
+        #         line.remove()  
+        # self.trajectory_line_list.clear()  
   
         # 如果需要的话，强制重新绘制图形  
         #self.ax.figure.canvas.draw_idle()
