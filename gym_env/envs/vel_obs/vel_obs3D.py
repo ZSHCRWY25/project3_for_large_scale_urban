@@ -23,13 +23,14 @@ def get_alpha(Pa, Pb, ra, rb):##计算圆锥张角
         return alpha_degrees
     
 def get_PAA(Pa, pra, prb, Va, Vb):##计算互惠速度障碍物起点
+        t = 2 
         x1, y1, z1 = Pa
         vax, vay, vaz = Va
         vbx, vby, vbz = Vb
         pr = pra / (pra + prb)##优先级
-        PAAx = pr*(2*x1 + (vax + vbx))
-        PAAy = pr*(2*y1 + (vay + vby))
-        PAAz = pr*(2*z1 + (vaz + vbz))
+        PAAx = pr*(2*x1 + (vax + vbx)*t)
+        PAAy = pr*(2*y1 + (vay + vby)*t)
+        PAAz = pr*(2*z1 + (vaz + vbz)*t)
         PAA = [PAAx, PAAy, PAAz]
         return PAA 
 
