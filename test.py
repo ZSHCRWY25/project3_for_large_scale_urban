@@ -68,9 +68,9 @@ rel_x=8
 rel_y=4
 rel_z = 1
 
-rel_vx = 2
-rel_vy = 1
-rel_vz = 0.48
+rel_vx = -2
+rel_vy = -1
+rel_vz = -0.48
 
 ra=rb=1
 #t = cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx,rel_vy,rel_vz,  ra, rb)

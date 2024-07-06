@@ -141,7 +141,7 @@ def cal_exp_tim(Pa, Pb, Va, Vb, ra, rb):
 
         return t
 
-def cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx,rel_vy,rel_vz,  ra, rb):
+def cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx_origin, rel_vy_origin, rel_vz_origin ,  ra, rb):
     r = ra + rb
 
         # rel_x: xa - xb
@@ -149,6 +149,11 @@ def cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx,rel_vy,rel_vz,  ra, rb):
         # rel_z: za - zb
         # (vx2 + vy2 + vz2)*t2 + (2x*vx + 2*y*vy)*t+x2+y2-(r+mr)2 = 0
         # 计算期望碰撞时间。
+    ##写程序的时候把速度方向搞反了，在这反回来......
+    rel_vx = - rel_vx_origin
+    rel_vy = - rel_vy_origin
+    rel_vz = - rel_vz_origin
+
 
     a = rel_vx ** 2 + rel_vy ** 2 + rel_vz**2
     b = 2* rel_x * rel_vx + 2* rel_y * rel_vy + 2* rel_z * rel_vz 
@@ -174,6 +179,12 @@ def cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx,rel_vy,rel_vz,  ra, rb):
         t = min(t3, t4)
 
     return t
+
+
+
+
+
+
 
 
 def distance(point1, point2):

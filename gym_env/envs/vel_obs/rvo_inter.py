@@ -33,15 +33,15 @@ class rvo_inter(reciprocal_vel_obs):
         obs_vo_list = []
         collision_flag = False
         vo_flag = False
-        #min_exp_time = inf
+        min_exp_time = inf
         min_dis = inf
 
         for vo_inf in vo_list:
             if vo_inf[1] is True:# vo_flag
                 obs_vo_list.append(vo_inf[0])#[x, y, z, ve_x, ve_y, ve_z, α, vo_flag, exp_time, collision_flag, min_dis]
                 vo_flag = True#[x, y, z, rel_x, rel_y, rel_z, 0, vo_flag, 0, collision_flag, dis_mr]
-                if vo_inf[4] < min_dis:#exp_time
-                    min_dis = vo_inf[2]##目的是寻找当前威胁最大障碍物
+                if vo_inf[4] < min_exp_time:#exp_time
+                    min_exp_time = vo_inf[2]##目的是寻找当前威胁最大障碍物
             
             if vo_inf[3] is True: collision_flag = True
 
@@ -172,21 +172,21 @@ class rvo_inter(reciprocal_vel_obs):
             exp_time = inf
         else:
             vo_flag = True
-            # exp_time = cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx, rel_vy, rel_vz, r, mr) 
-            # if exp_time < self.ctime_threshold:
-            #     vo_flag = True
-            # else:
-            #     vo_flag = False
-            #     exp_time = inf
+            exp_time = cal_vo_exp_tim(rel_x, rel_y, rel_z, rel_vx, rel_vy, rel_vz, r, mr) 
+            if exp_time < self.ctime_threshold:
+                vo_flag = True
+            else:
+                vo_flag = False
+                exp_time = inf
             
-        # input_exp_time = 1 / (exp_time+0.2##cal_vo_exp_tim这个函数有点问题
+
         min_dis = real_dis_mr-mr
 
         observation_vo = PAA[:3]+rvo_array[:3]+[alpha, min_dis, dis_mr]#[x, y, z, ve_x, ve_y, ve_z, α]
         #速度障碍物的方向和速度。
         #计算期望时间，判断是否存在速度障碍物。
         #构建观测信息，包括速度障碍物的相关参数。
-        return [observation_vo, vo_flag, exp_time, collision_flag, min_dis]#[[x, y, z, ve_x, ve_y, ve_z, α], vo_flag, exp_time, collision_flag, min_dis]
+        return [observation_vo, vo_flag, exp_time, collision_flag, exp_time]#[[x, y, z, ve_x, ve_y, ve_z, α], vo_flag, exp_time, collision_flag, min_dis]
 
 
     def vo_out_jud_vector(self, agent_state, vx, vy, vz, odro_rvo):##不碰撞返回ture alpha < beta

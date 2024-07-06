@@ -63,14 +63,14 @@ class ir_gym(env_base):
         dis_des = sqrt((action[0] - des_vel[0] )**2 + (action[1] - des_vel[1])**2+(action[2] - des_vel[2] )**2)
         max_dis_des = 3
         dis_des_reward = - dis_des / max_dis_des #  (0-1)
-        exp_time_reward = - 0.2/(min_exp_time+0.2) # (0-1)
-        
+        #exp_time_reward = - 0.2/(min_exp_time+0.2) # (0-1)
+        min_dis_reward = - 0.2/(min_dis + 0.2)
         # rvo reward    
         if vo_flag:
-            rvo_reward = p2 + p3 * dis_des_reward + p4 * exp_time_reward
+            rvo_reward = p2 + p3 * dis_des_reward + p4 * min_dis_reward #exp_time_reward
             
             if min_exp_time < 0.1:
-                rvo_reward = p2 + p1 * p4 * exp_time_reward
+                rvo_reward = p2 + p1 * p4 * min_dis_reward #exp_time_reward
         else:
             rvo_reward = p5 + p6 * dis_des_reward
         
@@ -93,7 +93,7 @@ class ir_gym(env_base):
         done_list = [l[2] for l in obs_reward_list]
         info_list = [l[3] for l in obs_reward_list]
         finish_list = [l[4] for l in obs_reward_list]
-        #对于每个机无人机，调用 observation_reward 方法计算观测和奖励。
+        #计算观测和奖励。
 #       返回观测列表、奖励列表、完成标志列表和其他信息列表。
 
         return observation_list, reward_list, done_list, info_list, finish_list 
@@ -107,7 +107,7 @@ class ir_gym(env_base):
         destination_arrive_reward_flag = False
         done = False
 
-        if drone.arrive(drone.state, drone.current_des) and not drone.arrive_flag:##到途经航路点奖励
+        if drone.arrive(drone.state, drone.current_des) and not drone.arrive_flag:##到途经航路点奖励5
             drone.arrive_flag = True
             arrive_reward_flag = True
         else:
@@ -122,9 +122,7 @@ class ir_gym(env_base):
                 destination_arrive_reward_flag = False
 
         deviation = drone.Deviation_from_route()
-
-
-############################################################################drone_state, drone_state_list, building_list, action
+        #drone_state, drone_state_list, building_list, action
         obs_vo_list, vo_flag, min_dis, collision_flag, obs_building_list = self.rvo.config_vo_inf(drone_state, odro_state_list, self.building_list, action)
         #obs_vo_list_nm, vo_flag, min_exp_time, collision_flag, obs_building_list
         cur_vel = np.squeeze(drone.vel)
