@@ -106,7 +106,7 @@ class env_Drone:##需要输入：无人机数量、航路点、航路点数量�
 
         return True
 
-    def drones_reset(self, **kwargs):
+    def drones_reset(self):
         for drone in self.Drone_list:
             drone.reset()
 

@@ -106,7 +106,7 @@ class ir_gym(env_base):
         des_vel = np.squeeze(drone.cal_des_vel())
         destination_arrive_reward_flag = False
         done = False
-
+        
         if drone.arrive(drone.state, drone.current_des) and not drone.arrive_flag:##到途经航路点奖励5
             drone.arrive_flag = True
             arrive_reward_flag = True
@@ -150,6 +150,7 @@ class ir_gym(env_base):
         done = True if collision_flag else False
         info = True if drone.arrive_flag else False
         finish = True if drone.destination_arrive_flag else False
+        #done = True if drone.destination_arrive_flag else False
         #info也可以处理更多信息：info = {'arrive_flag': drone.arrive_flag, 'destination_arrive_flag': drone.destination_arrive_flag}  
         
         return observation, reward, done, info, finish##[内外观测（自身+其他无人机速度障碍+冲突建筑物），移动奖励（碰撞+到点+终点），碰撞标准，到点标志 ，到终点标志]

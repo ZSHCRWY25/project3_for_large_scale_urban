@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser(description='drl rvo parameters')
 par_env = parser.add_argument_group('par env', 'environment parameters') 
 par_env.add_argument('--env_name', default='mrnav-v1')#指定环境名称
 par_env.add_argument('--world_path', default='train_world.yaml')#指定世界配置文件的路径，默认为'train_world.yaml'
-par_env.add_argument('--robot_number', type=int, default=4)#无人机数量
+par_env.add_argument('--drone_number', type=int, default=4)#无人机数量
 par_env.add_argument('--init_mode', default=3)#初始化模式
 par_env.add_argument('--reset_mode', default=3)#重置模式
 par_env.add_argument('--mpi', default=False)#: MPI（Message Passing Interface）启用标志
@@ -91,8 +91,8 @@ par_train.add_argument('--max_update_num', type=int, default=10)#学习率衰减
 args = parser.parse_args()
 
 # decide the model path and model name 
-model_path_check = args.save_path + args.save_name + str(args.robot_number) + '_{}'
-model_name_check = args.save_name + str(args.robot_number) +  '_{}'
+model_path_check = args.save_path + args.save_name + str(args.drone_number) + '_{}'
+model_name_check = args.save_name + str(args.drone_number) +  '_{}'
 while os.path.isdir(model_path_check.format(counter)):
     counter+=1
 
@@ -101,15 +101,22 @@ model_name = model_name_check.format(counter)
 
 load_fname = args.load_path + args.load_name
 
-env = gym.make(args.env_name, world_name=args.world_path, robot_number=args.robot_number, neighbors_region=args.neighbors_region, neighbors_num=args.neighbors_num, robot_init_mode=args.init_mode, env_train=args.env_train, random_bear=args.random_bear, random_radius=args.random_radius, reward_parameter=args.reward_parameter, full=args.full)
+env = gym.make(args.env_name, world_name=args.world_path, robot_number=args.drone_number, neighbors_region=args.neighbors_region, 
+               neighbors_num=args.neighbors_num, robot_init_mode=args.init_mode, env_train=args.env_train, random_bear=args.random_bear, 
+               random_radius=args.random_radius, reward_parameter=args.reward_parameter, full=args.full)
 
-test_env = gym.make(args.env_name, world_name=args.world_path, robot_number=args.robot_number, neighbors_region=args.neighbors_region, neighbors_num=args.neighbors_num, robot_init_mode=args.init_mode, env_train=False, random_bear=args.random_bear, random_radius=args.random_radius, reward_parameter=args.reward_parameter, plot=False, full=args.full)
+test_env = gym.make(args.env_name, world_name=args.world_path, robot_number=args.drone_number, neighbors_region=args.neighbors_region, 
+                    neighbors_num=args.neighbors_num, robot_init_mode=args.init_mode, env_train=False, random_bear=args.random_bear, 
+                    random_radius=args.random_radius, reward_parameter=args.reward_parameter, plot=False, full=args.full)
 
 policy = rnn_ac(env.observation_space, env.action_space, args.state_dim, args.rnn_input_dim, args.rnn_hidden_dim, 
                     args.hidden_sizes_ac, args.hidden_sizes_v, args.activation, args.output_activation, 
                     args.output_activation_v, args.use_gpu, args.rnn_mode, args.drop_p)
 
-ppo = multi_ppo(env, policy, args.pi_lr, args.vf_lr, args.train_epoch, args.steps_per_epoch, args.max_ep_len, args.gamma, args.lam, args.clip_ratio, args.train_pi_iters, args.train_v_iters, args.target_kl, args.render, args.render_freq, args.con_train,  args.seed, args.save_freq, args.save_figure, model_abs_path, model_name, load_fname, args.use_gpu, args.reset_mode, args.save_result, counter, test_env, args.lr_decay_epoch, args.max_update_num, args.mpi, args.figure_save_path)
+ppo = multi_ppo(env, policy, args.pi_lr, args.vf_lr, args.train_epoch, args.steps_per_epoch, args.max_ep_len, args.gamma, 
+                args.lam, args.clip_ratio, args.train_pi_iters, args.train_v_iters, args.target_kl, args.render, args.render_freq,
+                  args.con_train,  args.seed, args.save_freq, args.save_figure, model_abs_path, model_name, load_fname, args.use_gpu, 
+                  args.reset_mode, args.save_result, counter, test_env, args.lr_decay_epoch, args.max_update_num, args.mpi, args.figure_save_path)
 
 # save hyparameters
 if not os.path.exists(model_abs_path):

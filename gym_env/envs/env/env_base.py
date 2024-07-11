@@ -34,6 +34,7 @@ class env_base:
         self.robots_args = []
         self.plot = True
         self.init_environment(drone_class=Drone)
+   
 
     def read_start_des(self):
         current_dir = os.getcwd()  

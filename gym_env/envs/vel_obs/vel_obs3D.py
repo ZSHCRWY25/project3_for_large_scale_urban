@@ -15,7 +15,7 @@ def get_alpha(Pa, Pb, ra, rb):##计算圆锥张角
         R = ra + rb
         pa = np.array(Pa)  
         pb = np.array(Pb)
-        norm_ab = np.linalg.norm(pa - pb)
+        norm_ab = np.linalg.norm(pb - pa)
         alpha = asin(R/norm_ab)
         alpha = wraptopi(alpha)
         alpha_degrees = round(np.degrees(alpha), 1)

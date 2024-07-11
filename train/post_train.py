@@ -42,7 +42,7 @@ class  post_train:
         if policy_type == 'drl':
             model_action = self.load_policy(policy_path, self.std_factor, policy_dict=policy_dict)
 
-        o, r, d, ep_ret, ep_len, n = self.env.reset(mode=self.reset_mode), 0, False, 0, 0, 0
+        o, r, d, ep_ret, ep_len, n = self.env.drones_reset(), 0, False, 0, 0, 0
         ep_ret_list, speed_list, mean_speed_list, ep_len_list, sn = [], [], [], [], 0
 
         print('Policy Test Start !')
@@ -60,7 +60,7 @@ class  post_train:
             
             if policy_type == 'drl': 
                 abs_action_list =[]
-                for i in range(self.robot_number):
+                for i in range(self.drone_number):
 
                     start_time = time.time()
                     a_inc = np.round(model_action(o[i]), 2)
@@ -69,14 +69,14 @@ class  post_train:
                     temp = end_time - start_time
                     action_time_list.append(temp)
 
-                    cur_vel = self.env.ir_gym.robot_list[i].vel_omni
+                    cur_vel = self.env.ir_gym.drone_list[i].vel
                     abs_action = self.acceler_vel * a_inc + np.squeeze(cur_vel)
                     abs_action_list.append(abs_action)
 
-            o, r, d, info = self.env.step_ir(abs_action_list, vel_type = 'omni')
+            o, r, d, info = self.env.step(abs_action_list)#观测、回报、终止标志、附加信息
 
-            robot_speed_list = [np.linalg.norm(robot.vel_omni) for robot in self.env.ir_gym.robot_list]
-            avg_speed = np.average(robot_speed_list)
+            drone_speed_list = [np.linalg.norm(drone.vel) for drone in self.env.ir_gym.drone_list]
+            avg_speed = np.average(drone_speed_list)
             speed_list.append(avg_speed)
 
             ep_ret += r[0]#回报
@@ -96,7 +96,7 @@ class  post_train:
                 mean_speed_list.append(speed)
                 speed_list = []
 
-                o, r, d, ep_ret, ep_len = self.env.reset(mode=self.reset_mode), 0, False, 0, 0
+                o, r, d, ep_ret, ep_len = self.env.drones_reset(mode=self.reset_mode), 0, False, 0, 0
 
                 n += 1
 
